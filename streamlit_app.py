@@ -31,9 +31,9 @@ def get_keyword_data(conn, competitor_name):
     return df
 
 
-# Функція для витягання кількості повторень ключового слова
+# Функція для витягування кількості ключових слів
 def extract_keyword_count(row, keyword):
-    # Знаходимо ключове слово в рядку і витягуємо лише кількість перед "разів"
+    # Ігноруємо (Content: 1), обираючи лише частину з кількістю повторень
     pattern = re.compile(rf'{keyword} - (\d+) разів')
     match = pattern.search(row)
     if match:
@@ -82,6 +82,11 @@ def plot_keyword_history(df, keyword):
         # Використовуємо функцію для витягання кількості ключових слів
         keyword_counts = url_data['keywords_found'].apply(lambda row: extract_keyword_count(row, keyword))
 
+        # Додаємо перевірку, щоб показати значення ключових слів
+        st.write(f"Keyword counts for URL {url} and keyword {keyword}:")
+        st.write(keyword_counts)
+
+        # Додаємо графік для кожного URL
         plt.plot(url_data['date_checked'], keyword_counts, label=url)
 
     plt.title(f'Historical Trend for Keyword: {keyword}')
