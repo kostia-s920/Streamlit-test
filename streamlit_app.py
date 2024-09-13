@@ -31,14 +31,19 @@ def get_keyword_data(conn, competitor_name):
     return df
 
 
-# Функція для витягування кількості ключових слів
-def extract_keyword_count(row, keyword):
-    # Ігноруємо (Content: 1), обираючи лише частину з кількістю повторень
-    pattern = re.compile(rf'{keyword} - (\d+) разів')
-    match = pattern.search(row)
-    if match:
-        return int(match.group(1))  # Повертаємо кількість
-    return 0  # Якщо не знайдено
+# Функція для вилучення ключових слів і кількості їх повторень, ігноруючи значення в дужках
+def extract_keywords(row):
+    # Шукаємо всі ключові слова у форматі: "<keyword> - <number> разів", ігноруючи текст у дужках
+    pattern = re.findall(r'([\w\s-]+?)\s*-\s*(\d+)\s*разів', row)
+
+    # Створюємо словник із ключовими словами та кількістю їх повторень
+    keywords_dict = {}
+    for match in pattern:
+        keyword = match[0].strip()  # Витягуємо ключове слово
+        count = int(match[1])  # Витягуємо кількість повторень
+        keywords_dict[keyword] = count  # Додаємо в словник
+
+    return keywords_dict
 
 
 # Функція для отримання історичних даних по вибраному ключовому слову
@@ -80,11 +85,7 @@ def plot_keyword_history(df, keyword):
         url_data = df[df['url'] == url]
 
         # Використовуємо функцію для витягання кількості ключових слів
-        keyword_counts = url_data['keywords_found'].apply(lambda row: extract_keyword_count(row, keyword))
-
-        # Додаємо перевірку, щоб показати значення ключових слів
-        st.write(f"Keyword counts for URL {url} and keyword {keyword}:")
-        st.write(keyword_counts)
+        keyword_counts = url_data['keywords_found'].apply(lambda row: extract_keywords(row).get(keyword, 0))
 
         # Додаємо графік для кожного URL
         plt.plot(url_data['date_checked'], keyword_counts, label=url)
@@ -148,12 +149,15 @@ def main():
 
             # Перевіряємо, чи є ключові слова в записі
             if selected_page_data['keywords_found'] and isinstance(selected_page_data['keywords_found'], str):
-                found_keywords = selected_page_data['keywords_found'].split(', ')
+                # Витягуємо ключові слова і кількість повторень, ігноруючи значення в дужках
+                keywords_dict = extract_keywords(selected_page_data['keywords_found'])
+
                 st.write(f"Found keywords on {selected_url_for_keywords}:")
-                st.write(found_keywords)
+                st.write(keywords_dict)
 
                 # Вибираємо ключові слова для аналізу їх змін у часі
-                selected_keywords = st.multiselect('Select keywords to analyze historical occurrences', found_keywords)
+                selected_keywords = st.multiselect('Select keywords to analyze historical occurrences',
+                                                   list(keywords_dict.keys()))
 
                 if selected_keywords:
                     for keyword in selected_keywords:
@@ -165,6 +169,7 @@ def main():
                             st.write(f"No historical data found for keyword: {keyword}")
             else:
                 st.write(f"No keywords found for URL: {selected_url_for_keywords}")
+
 
 if __name__ == "__main__":
     main()
