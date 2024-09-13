@@ -2,6 +2,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import psycopg2
 import pandas as pd
+import re
 
 
 # Інші імпорти, як у вашому коді...
@@ -30,6 +31,15 @@ def get_keyword_data(conn, competitor_name):
     """
     df = pd.read_sql(query, conn)
     return df
+
+def extract_keyword_count(row, keyword):
+    # Знаходимо ключове слово в рядку і витягуємо лише кількість перед "разів"
+    pattern = re.compile(rf'{keyword} - (\d+) разів')
+    match = pattern.search(row)
+    if match:
+        return int(match.group(1))  # Повертаємо кількість
+    return 0  # Якщо не знайдено
+
 
 
 # Функція для отримання історичних даних по вибраному ключовому слову
@@ -69,6 +79,10 @@ def plot_keyword_history(df, keyword):
     # Перебираємо всі URL і будуємо графік по кожному з них
     for url in df['url'].unique():
         url_data = df[df['url'] == url]
+
+        # Використовуємо функцію для витягання кількості ключових слів
+        keyword_counts = url_data['keywords_found'].apply(lambda row: extract_keyword_count(row, keyword))
+        plt.plot(url_data['date_checked'], keyword_counts, label=url)
 
         # Створюємо масив з кількістю повторень ключового слова для кожної дати
         keyword_counts = []
