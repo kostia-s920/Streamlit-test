@@ -77,18 +77,17 @@ def plot_keyword_trend(df, competitor_name):
 
 
 # Функція для побудови історичного графіка по ключовому слову
-def plot_keyword_history(df, keyword):
+def plot_keyword_history(df, keyword, selected_url):
     plt.figure(figsize=(10, 6))
 
-    # Перебираємо всі URL і будуємо графік по кожному з них
-    for url in df['url'].unique():
-        url_data = df[df['url'] == url]
+    # Фільтруємо дані по обраному URL
+    url_data = df[df['url'] == selected_url]
 
-        # Використовуємо функцію для витягання кількості ключових слів
-        keyword_counts = url_data['keywords_found'].apply(lambda row: extract_keywords(row).get(keyword, 0))
+    # Використовуємо функцію для витягання кількості ключових слів
+    keyword_counts = url_data['keywords_found'].apply(lambda row: extract_keywords(row).get(keyword, 0))
 
-        # Додаємо графік для кожного URL
-        plt.plot(url_data['date_checked'], keyword_counts, label=url)
+    # Додаємо графік для обраного URL
+    plt.plot(url_data['date_checked'], keyword_counts, label=selected_url)
 
     plt.title(f'Historical Trend for Keyword: {keyword}')
     plt.xlabel('Date')
@@ -164,7 +163,7 @@ def main():
                         st.subheader(f'Historical Trend for Keyword: {keyword}')
                         keyword_history_df = get_keyword_history(conn, competitor_name, keyword)
                         if not keyword_history_df.empty:
-                            plot_keyword_history(keyword_history_df, keyword)
+                            plot_keyword_history(keyword_history_df, keyword, selected_url_for_keywords)
                         else:
                             st.write(f"No historical data found for keyword: {keyword}")
             else:
