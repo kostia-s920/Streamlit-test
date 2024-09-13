@@ -65,9 +65,24 @@ def plot_keyword_trend(df, competitor_name):
 # Функція для побудови історичного графіка по ключовому слову
 def plot_keyword_history(df, keyword):
     plt.figure(figsize=(10, 6))
+
+    # Перебираємо всі URL і будуємо графік по кожному з них
     for url in df['url'].unique():
         url_data = df[df['url'] == url]
-        plt.plot(url_data['date_checked'], url_data['keywords_found'].str.count(keyword), label=url)
+
+        # Створюємо масив з кількістю повторень ключового слова для кожної дати
+        keyword_counts = []
+        for row in url_data['keywords_found']:
+            # Вибираємо дані про кількість повторень ключового слова
+            if keyword in row:
+                start_idx = row.find(keyword)
+                end_idx = row.find('разів', start_idx)
+                keyword_count = int(row[start_idx + len(keyword) + 3:end_idx].strip())
+                keyword_counts.append(keyword_count)
+            else:
+                keyword_counts.append(0)
+
+        plt.plot(url_data['date_checked'], keyword_counts, label=url)
 
     plt.title(f'Historical Trend for Keyword: {keyword}')
     plt.xlabel('Date')
