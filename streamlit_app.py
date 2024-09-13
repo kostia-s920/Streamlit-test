@@ -5,8 +5,6 @@ import pandas as pd
 import re
 
 
-# Інші імпорти, як у вашому коді...
-
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
@@ -32,6 +30,8 @@ def get_keyword_data(conn, competitor_name):
     df = pd.read_sql(query, conn)
     return df
 
+
+# Функція для витягання кількості повторень ключового слова
 def extract_keyword_count(row, keyword):
     # Знаходимо ключове слово в рядку і витягуємо лише кількість перед "разів"
     pattern = re.compile(rf'{keyword} - (\d+) разів')
@@ -39,7 +39,6 @@ def extract_keyword_count(row, keyword):
     if match:
         return int(match.group(1))  # Повертаємо кількість
     return 0  # Якщо не знайдено
-
 
 
 # Функція для отримання історичних даних по вибраному ключовому слову
@@ -82,23 +81,6 @@ def plot_keyword_history(df, keyword):
 
         # Використовуємо функцію для витягання кількості ключових слів
         keyword_counts = url_data['keywords_found'].apply(lambda row: extract_keyword_count(row, keyword))
-        plt.plot(url_data['date_checked'], keyword_counts, label=url)
-
-        # Створюємо масив з кількістю повторень ключового слова для кожної дати
-        keyword_counts = []
-        for row in url_data['keywords_found']:
-            # Вибираємо дані про кількість повторень ключового слова
-            if keyword in row:
-                start_idx = row.find(keyword)
-                end_idx = row.find('разів', start_idx)
-                count_str = row[start_idx + len(keyword) + 3:end_idx].strip()
-                if count_str.isdigit():
-                    keyword_count = int(count_str)
-                else:
-                    keyword_count = 0  # або інше значення за замовчуванням
-                keyword_counts.append(keyword_count)
-            else:
-                keyword_counts.append(0)
 
         plt.plot(url_data['date_checked'], keyword_counts, label=url)
 
