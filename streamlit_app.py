@@ -77,7 +77,11 @@ def plot_keyword_history(df, keyword):
             if keyword in row:
                 start_idx = row.find(keyword)
                 end_idx = row.find('разів', start_idx)
-                keyword_count = int(row[start_idx + len(keyword) + 3:end_idx].strip())
+                count_str = row[start_idx + len(keyword) + 3:end_idx].strip()
+                if count_str.isdigit():
+                    keyword_count = int(count_str)
+                else:
+                    keyword_count = 0  # або інше значення за замовчуванням
                 keyword_counts.append(keyword_count)
             else:
                 keyword_counts.append(0)
