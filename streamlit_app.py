@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import psycopg2
 import pandas as pd
 import re
+import matplotlib.dates as mdates
 
 
 # Функція для підключення до бази даних PostgreSQL
@@ -95,6 +96,10 @@ def plot_keyword_history(df, keyword, selected_url):
     plt.title(f'Historical Trend for Keyword: {keyword}')
     plt.xlabel('Date')
     plt.ylabel('Keyword Occurrences')
+    # Форматування осі дати
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=1))
+    plt.gcf().autofmt_xdate()
     plt.legend(loc='best', bbox_to_anchor=(1, 1))
     plt.xticks(rotation=45)
     plt.tight_layout()
