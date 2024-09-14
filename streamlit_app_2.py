@@ -24,7 +24,7 @@ def connect_to_db():
 # Функція для отримання даних по ключовим словам із бази даних
 def get_keyword_data(conn, competitor_name):
     query = f"""
-        SELECT url, keywords_count, keywords_found, date_checked 
+        SELECT url, keywords_count, keywords_found, content, date_checked 
         FROM {competitor_name}_temp
         ORDER BY date_checked ASC
     """
@@ -131,6 +131,14 @@ def plot_comparison(df_list, competitor_names, selected_urls):
     st.pyplot(plt)
 
 
+# Функція для відображення контенту сторінки з підсвічуванням ключових слів
+def highlight_keywords(text, keywords):
+    for keyword in keywords:
+        # Виділяємо ключові слова жирним шрифтом і підкреслюємо
+        text = re.sub(f'({keyword})', r'**\1**', text, flags=re.IGNORECASE)
+    return text
+
+
 # Основна функція для відображення даних у Streamlit
 def main():
     st.title('Keyword Count and Historical Analysis for Competitors')
@@ -183,6 +191,8 @@ def main():
         # Вибираємо URL для аналізу знайдених ключових слів
         selected_url_for_keywords = st.selectbox('Select URL to view found keywords', df['url'].unique())
 
+        selected_keywords = []
+
         # Показуємо знайдені ключові слова для обраного URL
         if selected_url_for_keywords:
             selected_page_data = df[df['url'] == selected_url_for_keywords].iloc[0]
@@ -234,6 +244,23 @@ def main():
         # Побудова графіка порівняння
         if len(selected_urls_for_comparison) == len(selected_competitors):
             plot_comparison(df_list, selected_competitors, selected_urls_for_comparison)
+
+        # Додаємо блок для відображення контенту сторінки
+        with st.expander("Click to expand/collapse page content", expanded=False):
+            st.subheader("Page Content with Highlighted Keywords")
+
+            # Вибір URL для відображення контенту
+            selected_url_for_content = st.selectbox('Select URL to view content', df['url'].unique())
+
+            # Показуємо контент сторінки з підсвіченими ключовими словами
+            if selected_url_for_content:
+                page_content = df[df['url'] == selected_url_for_content]['content'].values[0]
+                if selected_keywords:
+                    highlighted_content = highlight_keywords(page_content, selected_keywords)
+                else:
+                    highlighted_content = page_content
+
+                st.markdown(highlighted_content)
 
 
 if __name__ == "__main__":
