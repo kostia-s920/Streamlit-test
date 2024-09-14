@@ -134,8 +134,8 @@ def plot_comparison(df_list, competitor_names, selected_urls):
 # Функція для відображення контенту сторінки з підсвічуванням ключових слів
 def highlight_keywords(text, keywords):
     for keyword in keywords:
-        # Виділяємо ключові слова жирним шрифтом і підкреслюємо
-        text = re.sub(f'({keyword})', r'**\1**', text, flags=re.IGNORECASE)
+        # Виділяємо ключові слова червоним жирним шрифтом
+        text = re.sub(f'({keyword})', r'<span style="color:red; font-weight:bold;">\1</span>', text, flags=re.IGNORECASE)
     return text
 
 
@@ -190,8 +190,6 @@ def main():
 
         # Вибираємо URL для аналізу знайдених ключових слів
         selected_url_for_keywords = st.selectbox('Select URL to view found keywords', df['url'].unique())
-
-        selected_keywords = []
 
         # Показуємо знайдені ключові слова для обраного URL
         if selected_url_for_keywords:
@@ -254,13 +252,20 @@ def main():
 
             # Показуємо контент сторінки з підсвіченими ключовими словами
             if selected_url_for_content:
+                # Витягуємо контент для обраного URL
                 page_content = df[df['url'] == selected_url_for_content]['content'].values[0]
-                if selected_keywords:
-                    highlighted_content = highlight_keywords(page_content, selected_keywords)
-                else:
-                    highlighted_content = page_content
+                keywords_found = df[df['url'] == selected_url_for_content]['keywords_found'].values[0]
 
-                st.markdown(highlighted_content)
+                # Автоматичне вилучення знайдених ключових слів
+                keywords_dict = extract_keywords(keywords_found)
+                found_keywords = list(keywords_dict.keys())
+
+                # Виділяємо знайдені ключові слова у тексті
+                highlighted_content = highlight_keywords(page_content, found_keywords)
+
+                # Відображаємо текст з полями, пробілами та відступами
+                st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
+                            unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
