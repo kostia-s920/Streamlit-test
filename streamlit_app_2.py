@@ -109,6 +109,28 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
     st.pyplot(plt)
 
 
+# Функція для графіка порівняння кількох конкурентів
+def plot_comparison(df_list, competitor_names, selected_urls):
+    plt.figure(figsize=(10, 6))
+
+    # Проходимо по всім обраним конкурентам та їх сторінкам
+    for df, competitor, url in zip(df_list, competitor_names, selected_urls):
+        url_data = df[df['url'] == url]
+        if not url_data.empty:
+            plt.plot(url_data['date_checked'], url_data['keywords_count'], label=f'{competitor}: {url}')
+        else:
+            st.write(f"No data for {competitor}: {url}")
+
+    plt.title('Keyword Count Comparison')
+    plt.xlabel('Date')
+    plt.ylabel('Keyword Count')
+    plt.legend(loc='best', bbox_to_anchor=(1, 1))
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    plt.tight_layout()
+    st.pyplot(plt)
+
+
 # Основна функція для відображення даних у Streamlit
 def main():
     st.title('Keyword Count and Historical Analysis for Competitors')
@@ -191,6 +213,25 @@ def main():
                             st.write(f"No historical data found for keyword: {keyword}")
             else:
                 st.write(f"No keywords found for URL: {selected_url_for_keywords}")
+
+        # Додаємо можливість порівняння конкурентів
+        st.subheader('Comparison of Keywords Between Competitors')
+
+        # Вибір кількох конкурентів
+        selected_competitors = st.multiselect("Select Competitors for Comparison", competitors, default=competitors[:2])
+
+        # Отримуємо дані для кожного конкурента
+        df_list = [get_keyword_data(conn, competitor) for competitor in selected_competitors]
+
+        # Вибір URL для кожного конкурента
+        selected_urls_for_comparison = []
+        for competitor, df in zip(selected_competitors, df_list):
+            selected_url = st.selectbox(f'Select URL for {competitor}', df['url'].unique(), key=competitor)
+            selected_urls_for_comparison.append(selected_url)
+
+        # Побудова графіка порівняння
+        if len(selected_urls_for_comparison) == len(selected_competitors):
+            plot_comparison(df_list, selected_competitors, selected_urls_for_comparison)
 
 
 if __name__ == "__main__":
