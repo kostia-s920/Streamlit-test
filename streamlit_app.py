@@ -86,7 +86,7 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
         st.write(f"No data for URL: {selected_url}")
         return
 
-    # Перевіряємо, що дати коректно перетворені на datetime
+    # Перевіряємо  що дати коректно перетворені на datetime
     url_data['date_checked'] = pd.to_datetime(url_data['date_checked'], errors='coerce')
 
     # Використовуємо функцію для витягання кількості ключових слів
