@@ -82,6 +82,9 @@ def plot_keyword_history(df, keyword, selected_url):
 
     # Фільтруємо дані по обраному URL
     url_data = df[df['url'] == selected_url]
+    if url_data.empty:
+        st.write(f"No data for URL: {selected_url}")
+        return
 
     # Використовуємо функцію для витягання кількості ключових слів
     keyword_counts = url_data['keywords_found'].apply(lambda row: extract_keywords(row).get(keyword, 0))
@@ -121,11 +124,14 @@ def main():
 
         # Фільтр по датах
         if not df.empty:
-            start_date = st.date_input('Start Date', df['date_checked'].min())
-            end_date = st.date_input('End Date', df['date_checked'].max())
+            start_date = pd.to_datetime(st.date_input('Start Date', df['date_checked'].min())).date()
+            end_date = pd.to_datetime(st.date_input('End Date', df['date_checked'].max())).date()
 
-            df = df[
-                (df['date_checked'] >= pd.to_datetime(start_date)) & (df['date_checked'] <= pd.to_datetime(end_date))]
+            # Перетворення дати без часу
+            df['date_checked'] = pd.to_datetime(df['date_checked']).dt.date
+
+            # Фільтрація за діапазоном дат
+            df = df[(df['date_checked'] >= start_date) & (df['date_checked'] <= end_date)]
 
         # Фільтруємо дані по вибраним URL
         if selected_urls:
