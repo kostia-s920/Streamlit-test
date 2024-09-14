@@ -20,7 +20,6 @@ def connect_to_db():
         print(f"Error connecting to database: {e}")
         return None
 
-
 # Функція для отримання даних по ключовим словам із бази даних
 def get_keyword_data(conn, competitor_name):
     query = f"""
