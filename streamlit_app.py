@@ -78,7 +78,7 @@ def plot_keyword_trend(df, competitor_name):
 
 
 # Функція для побудови історичного графіка по ключовому слову
-def plot_keyword_history(df, keyword, selected_url):
+def plot_keyword_history(df, keyword, selected_url, chart_type):
     plt.figure(figsize=(10, 6))
 
     # Фільтруємо дані по обраному URL
@@ -90,12 +90,18 @@ def plot_keyword_history(df, keyword, selected_url):
     # Використовуємо функцію для витягання кількості ключових слів
     keyword_counts = url_data['keywords_found'].apply(lambda row: extract_keywords(row).get(keyword, 0))
 
-    # Додаємо графік для обраного URL
-    plt.plot(url_data['date_checked'], keyword_counts, label=selected_url)
+    # Додаємо графік залежно від обраного типу графіка
+    if chart_type == 'Line Chart':
+        plt.plot(url_data['date_checked'], keyword_counts, label=selected_url)
+    elif chart_type == 'Bar Chart':
+        plt.bar(url_data['date_checked'], keyword_counts)
+    elif chart_type == 'Scatter Plot':
+        plt.scatter(url_data['date_checked'], keyword_counts)
 
     plt.title(f'Historical Trend for Keyword: {keyword}')
     plt.xlabel('Date')
     plt.ylabel('Keyword Occurrences')
+
     # Форматування осі дати
     plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
     plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=1))
@@ -142,6 +148,12 @@ def main():
         if selected_urls:
             df = df[df['url'].isin(selected_urls)]
 
+        # Додамо вибір типу графіка
+        chart_type = st.selectbox(
+            "Select Chart Type",
+            ['Line Chart', 'Bar Chart', 'Scatter Plot']
+        )
+
         # Відображаємо таблицю з даними
         st.write(df)
 
@@ -174,7 +186,8 @@ def main():
                         st.subheader(f'Historical Trend for Keyword: {keyword}')
                         keyword_history_df = get_keyword_history(conn, competitor_name, keyword)
                         if not keyword_history_df.empty:
-                            plot_keyword_history(keyword_history_df, keyword, selected_url_for_keywords)
+                            # Передаємо тип графіка до функції побудови графіка
+                            plot_keyword_history(keyword_history_df, keyword, selected_url_for_keywords, chart_type)
                         else:
                             st.write(f"No historical data found for keyword: {keyword}")
             else:
