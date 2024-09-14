@@ -17,8 +17,9 @@ def connect_to_db():
         )
         return connection
     except Exception as e:
-        print(f"Error connecting to database: {e}")
+        st.error(f"Error connecting to database: {e}")
         return None
+
 
 # Функція для отримання даних по ключовим словам із бази даних
 def get_keyword_data(conn, competitor_name):
@@ -33,16 +34,8 @@ def get_keyword_data(conn, competitor_name):
 
 # Функція для вилучення ключових слів і кількості їх повторень, ігноруючи значення в дужках
 def extract_keywords(row):
-    # Шукаємо всі ключові слова у форматі: "<keyword> - <number> разів", ігноруючи текст у дужках
     pattern = re.findall(r'([\w\s-]+?)\s*-\s*(\d+)\s*разів', row)
-
-    # Створюємо словник із ключовими словами та кількістю їх повторень
-    keywords_dict = {}
-    for match in pattern:
-        keyword = match[0].strip()  # Витягуємо ключове слово
-        count = int(match[1])  # Витягуємо кількість повторень
-        keywords_dict[keyword] = count  # Додаємо в словник
-
+    keywords_dict = {match[0].strip(): int(match[1]) for match in pattern}
     return keywords_dict
 
 
@@ -71,8 +64,6 @@ def plot_keyword_trend(df, competitor_name):
     plt.legend(loc='best', bbox_to_anchor=(1, 1))
     plt.xticks(rotation=45)
     plt.tight_layout()
-
-    # Показуємо графік у Streamlit
     st.pyplot(plt)
 
 
@@ -86,13 +77,13 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
         st.write(f"No data for URL: {selected_url}")
         return
 
-    # Перевіряємо  що дати коректно перетворені на datetime
+    # Перетворення дат на datetime
     url_data['date_checked'] = pd.to_datetime(url_data['date_checked'], errors='coerce')
 
-    # Використовуємо функцію для витягання кількості ключових слів
+    # Використовуємо функцію для вилучення кількості ключових слів
     keyword_counts = url_data['keywords_found'].apply(lambda row: extract_keywords(row).get(keyword, 0))
 
-    # Додаємо графік залежно від обраного типу графіка
+    # Додаємо графік в залежності від обраного типу графіка
     if chart_type == 'Line Chart':
         plt.plot(url_data['date_checked'], keyword_counts, label=selected_url)
     elif chart_type == 'Bar Chart':
@@ -115,8 +106,6 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
     plt.legend(loc='best', bbox_to_anchor=(1, 1))
     plt.xticks(rotation=45)
     plt.tight_layout()
-
-    # Показуємо графік у Streamlit
     st.pyplot(plt)
 
 
@@ -150,9 +139,14 @@ def main():
             # Фільтрація за діапазоном дат
             df = df[(df['date_checked'] >= start_date) & (df['date_checked'] <= end_date)]
 
+            if df.empty:
+                st.write("No data available for the selected date range.")
+
         # Фільтруємо дані по вибраним URL
         if selected_urls:
             df = df[df['url'].isin(selected_urls)]
+            if df.empty:
+                st.write("No data available for the selected URLs.")
 
         # Відображаємо таблицю з даними
         st.write(df)
@@ -180,20 +174,9 @@ def main():
                 # Вибираємо ключові слова для аналізу їх змін у часі
                 selected_keywords = st.multiselect('Select keywords to analyze historical occurrences',
                                                    list(keywords_dict.keys()))
-                # Ініціалізуємо chart_type значенням за замовчуванням
-                chart_type = None
 
-                # Переміщений вибір типу графіка нижче, до вибору ключових слів**
                 if selected_keywords:
                     # Додамо вибір типу графіка нижче
-                    chart_type = st.selectbox(
-                        "Select Chart Type",
-                        ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart', 'Step Chart']
-                    )
-
-                # Переміщення вибору типу графіка нижче
-                if selected_keywords:
-                    # Додамо вибір типу графіка
                     chart_type = st.selectbox(
                         "Select Chart Type",
                         ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart', 'Step Chart']
@@ -208,3 +191,7 @@ def main():
                             st.write(f"No historical data found for keyword: {keyword}")
             else:
                 st.write(f"No keywords found for URL: {selected_url_for_keywords}")
+
+
+if __name__ == "__main__":
+    main()
