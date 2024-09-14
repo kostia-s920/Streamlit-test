@@ -147,12 +147,6 @@ def main():
         if selected_urls:
             df = df[df['url'].isin(selected_urls)]
 
-        # Додамо вибір типу графіка
-        chart_type = st.selectbox(
-            "Select Chart Type",
-            ['Line Chart', 'Bar Chart', 'Scatter Plot']
-        )
-
         # Відображаємо таблицю з даними
         st.write(df)
 
@@ -179,6 +173,16 @@ def main():
                 # Вибираємо ключові слова для аналізу їх змін у часі
                 selected_keywords = st.multiselect('Select keywords to analyze historical occurrences',
                                                    list(keywords_dict.keys()))
+                # Ініціалізуємо chart_type значенням за замовчуванням
+                chart_type = None
+
+                # Переміщений вибір типу графіка нижче, до вибору ключових слів**
+                if selected_keywords:
+                    # Додамо вибір типу графіка нижче
+                    chart_type = st.selectbox(
+                        "Select Chart Type",
+                        ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart', 'Step Chart']
+                    )
 
                 if selected_keywords:
                     for keyword in selected_keywords:
