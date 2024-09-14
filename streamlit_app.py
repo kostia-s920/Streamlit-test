@@ -96,6 +96,10 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
         plt.bar(url_data['date_checked'], keyword_counts)
     elif chart_type == 'Scatter Plot':
         plt.scatter(url_data['date_checked'], keyword_counts)
+    elif chart_type == 'Area Chart':
+        plt.fill_between(url_data['date_checked'], keyword_counts, label=selected_url, alpha=0.5)
+    elif chart_type == 'Step Chart':
+        plt.step(url_data['date_checked'], keyword_counts, label=selected_url, where='mid')
 
     plt.title(f'Historical Trend for Keyword: {keyword}')
     plt.xlabel('Date')
@@ -184,18 +188,20 @@ def main():
                         ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart', 'Step Chart']
                     )
 
+                # Переміщення вибору типу графіка нижче
                 if selected_keywords:
+                    # Додамо вибір типу графіка
+                    chart_type = st.selectbox(
+                        "Select Chart Type",
+                        ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart', 'Step Chart']
+                    )
+
                     for keyword in selected_keywords:
                         st.subheader(f'Historical Trend for Keyword: {keyword}')
                         keyword_history_df = get_keyword_history(conn, competitor_name, keyword)
                         if not keyword_history_df.empty:
-                            # Передаємо тип графіка до функції побудови графіка
                             plot_keyword_history(keyword_history_df, keyword, selected_url_for_keywords, chart_type)
                         else:
                             st.write(f"No historical data found for keyword: {keyword}")
             else:
                 st.write(f"No keywords found for URL: {selected_url_for_keywords}")
-
-
-if __name__ == "__main__":
-    main()
