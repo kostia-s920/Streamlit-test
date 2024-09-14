@@ -170,8 +170,10 @@ def main():
             if df.empty:
                 st.write("No data available for the selected URLs.")
 
-        # Відображаємо таблицю з даними
-        st.write(df)
+        # Додаємо можливість згорнути/розгорнути таблицю
+        with st.expander("Click to expand/collapse the data table", expanded=True):
+            # Відображаємо таблицю з даними
+            st.write(df)
 
         # Відображаємо графік на основі даних
         if not df.empty:
