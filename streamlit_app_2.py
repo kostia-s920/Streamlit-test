@@ -5,7 +5,6 @@ import pandas as pd
 import re
 import matplotlib.dates as mdates
 
-
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
@@ -20,7 +19,6 @@ def connect_to_db():
         st.error(f"Error connecting to database: {e}")
         return None
 
-
 # Функція для отримання даних по ключовим словам із бази даних
 def get_keyword_data(conn, competitor_name):
     query = f"""
@@ -31,13 +29,11 @@ def get_keyword_data(conn, competitor_name):
     df = pd.read_sql(query, conn)
     return df
 
-
 # Функція для вилучення ключових слів і кількості їх повторень, ігноруючи значення в дужках
 def extract_keywords(row):
     pattern = re.findall(r'([\w\s-]+?)\s*-\s*(\d+)\s*разів', row)
     keywords_dict = {match[0].strip(): int(match[1]) for match in pattern}
     return keywords_dict
-
 
 # Функція для отримання історичних даних по вибраному ключовому слову
 def get_keyword_history(conn, competitor_name, keyword):
@@ -49,7 +45,6 @@ def get_keyword_history(conn, competitor_name, keyword):
     """
     df = pd.read_sql(query, conn, params=[f'%{keyword}%'])
     return df
-
 
 # Функція для побудови графіка ключових слів
 def plot_keyword_trend(df, competitor_name):
@@ -65,7 +60,6 @@ def plot_keyword_trend(df, competitor_name):
     plt.xticks(rotation=45)
     plt.tight_layout()
     st.pyplot(plt)
-
 
 # Функція для побудови історичного графіка по ключовому слову
 def plot_keyword_history(df, keyword, selected_url, chart_type):
@@ -108,7 +102,6 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
     plt.tight_layout()
     st.pyplot(plt)
 
-
 # Функція для графіка порівняння кількох конкурентів
 def plot_comparison(df_list, competitor_names, selected_urls):
     plt.figure(figsize=(10, 6))
@@ -130,14 +123,12 @@ def plot_comparison(df_list, competitor_names, selected_urls):
     plt.tight_layout()
     st.pyplot(plt)
 
-
 # Функція для відображення контенту сторінки з підсвічуванням ключових слів
 def highlight_keywords(text, keywords):
     for keyword in keywords:
         # Виділяємо ключові слова червоним жирним шрифтом
         text = re.sub(f'({keyword})', r'<span style="color:red; font-weight:bold;">\1</span>', text, flags=re.IGNORECASE)
     return text
-
 
 # Основна функція для відображення даних у Streamlit
 def main():
@@ -150,18 +141,18 @@ def main():
         competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com']
 
         # Дозволяємо користувачеві вибрати конкурента для аналізу
-        competitor_name = st.selectbox("Select Competitor", competitors)
+        competitor_name = st.selectbox("Select Competitor", competitors, key="competitor_select_1")
 
         # Отримуємо дані по ключовим словам для вибраного конкурента
         df = get_keyword_data(conn, competitor_name)
 
         # Фільтр по URL (дозволяємо вибрати 1-5 URL)
-        selected_urls = st.multiselect('Select URLs', df['url'].unique(), max_selections=5)
+        selected_urls = st.multiselect('Select URLs', df['url'].unique(), max_selections=5, key="url_select")
 
         # Фільтр по датах
         if not df.empty:
-            start_date = pd.to_datetime(st.date_input('Start Date', df['date_checked'].min())).date()
-            end_date = pd.to_datetime(st.date_input('End Date', df['date_checked'].max())).date()
+            start_date = pd.to_datetime(st.date_input('Start Date', df['date_checked'].min(), key="start_date")).date()
+            end_date = pd.to_datetime(st.date_input('End Date', df['date_checked'].max(), key="end_date")).date()
 
             # Перетворення дати без часу
             df['date_checked'] = pd.to_datetime(df['date_checked']).dt.date
@@ -189,7 +180,7 @@ def main():
             plot_keyword_trend(df, competitor_name)
 
         # Вибираємо URL для аналізу знайдених ключових слів
-        selected_url_for_keywords = st.selectbox('Select URL to view found keywords', df['url'].unique())
+        selected_url_for_keywords = st.selectbox('Select URL to view found keywords', df['url'].unique(), key="keyword_url_select")
 
         # Показуємо знайдені ключові слова для обраного URL
         if selected_url_for_keywords:
@@ -205,13 +196,14 @@ def main():
 
                 # Вибираємо ключові слова для аналізу їх змін у часі
                 selected_keywords = st.multiselect('Select keywords to analyze historical occurrences',
-                                                   list(keywords_dict.keys()))
+                                                   list(keywords_dict.keys()), key="keyword_multiselect")
 
                 if selected_keywords:
                     # Додамо вибір типу графіка нижче
                     chart_type = st.selectbox(
                         "Select Chart Type",
-                        ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart', 'Step Chart']
+                        ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart', 'Step Chart'],
+                        key="chart_select"
                     )
 
                     for keyword in selected_keywords:
@@ -228,7 +220,7 @@ def main():
         st.subheader('Comparison of Keywords Between Competitors')
 
         # Вибір кількох конкурентів
-        selected_competitors = st.multiselect("Select Competitors for Comparison", competitors, default=competitors[:2])
+        selected_competitors = st.multiselect("Select Competitors for Comparison", competitors, default=competitors[:2], key="competitors_multiselect")
 
         # Отримуємо дані для кожного конкурента
         df_list = [get_keyword_data(conn, competitor) for competitor in selected_competitors]
@@ -236,7 +228,7 @@ def main():
         # Вибір URL для кожного конкурента
         selected_urls_for_comparison = []
         for competitor, df in zip(selected_competitors, df_list):
-            selected_url = st.selectbox(f'Select URL for {competitor}', df['url'].unique(), key=competitor)
+            selected_url = st.selectbox(f'Select URL for {competitor}', df['url'].unique(), key=f"url_select_{competitor}")
             selected_urls_for_comparison.append(selected_url)
 
         # Побудова графіка порівняння
@@ -247,21 +239,21 @@ def main():
         with st.expander("Click to expand/collapse page content", expanded=False):
             st.subheader("Page Content with Highlighted Keywords")
 
-            # Дозволяємо користувачеві вибрати конкурента для аналізу
-            competitor_name = st.selectbox("Select Competitor", competitors)
+            # Спочатку вибір конкурента
+            competitor_name_content = st.selectbox("Select Competitor", competitors, key="competitor_content_select")
 
             # Отримуємо дані по ключовим словам для вибраного конкурента
-            df = get_keyword_data(conn, competitor_name)
+            df_content = get_keyword_data(conn, competitor_name_content)
 
             # Якщо конкурент вибраний, дозволяємо вибрати сторінку
-            if not df.empty:
-                selected_url_for_content = st.selectbox('Select URL to view content', df['url'].unique())
+            if not df_content.empty:
+                selected_url_for_content = st.selectbox('Select URL to view content', df_content['url'].unique(), key="url_content_select")
 
                 # Показуємо контент сторінки з підсвіченими ключовими словами
                 if selected_url_for_content:
                     # Витягуємо контент для обраного URL
-                    page_content = df[df['url'] == selected_url_for_content]['content'].values[0]
-                    keywords_found = df[df['url'] == selected_url_for_content]['keywords_found'].values[0]
+                    page_content = df_content[df_content['url'] == selected_url_for_content]['content'].values[0]
+                    keywords_found = df_content[df_content['url'] == selected_url_for_content]['keywords_found'].values[0]
 
                     # Автоматичне вилучення знайдених ключових слів
                     keywords_dict = extract_keywords(keywords_found)
@@ -273,7 +265,6 @@ def main():
                     # Відображаємо текст з полями, пробілами та відступами
                     st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
                                 unsafe_allow_html=True)
-
 
 if __name__ == "__main__":
     main()
