@@ -175,7 +175,7 @@ def main():
         # Фільтруємо дані по вибраним URL
         if selected_urls:
             df = df[df['url'].isin(selected_urls)]
-            if df.empty:
+            if df.empty():
                 st.write("No data available for the selected URLs.")
 
         # Додаємо можливість згорнути/розгорнути таблицю
@@ -247,25 +247,26 @@ def main():
         with st.expander("Click to expand/collapse page content", expanded=False):
             st.subheader("Page Content with Highlighted Keywords")
 
-            # Вибір URL для відображення контенту
-            selected_url_for_content = st.selectbox('Select URL to view content', df['url'].unique())
+            # Якщо конкурент вибраний, дозволяємо вибрати сторінку
+            if not df.empty:
+                selected_url_for_content = st.selectbox('Select URL to view content', df['url'].unique())
 
-            # Показуємо контент сторінки з підсвіченими ключовими словами
-            if selected_url_for_content:
-                # Витягуємо контент для обраного URL
-                page_content = df[df['url'] == selected_url_for_content]['content'].values[0]
-                keywords_found = df[df['url'] == selected_url_for_content]['keywords_found'].values[0]
+                # Показуємо контент сторінки з підсвіченими ключовими словами
+                if selected_url_for_content:
+                    # Витягуємо контент для обраного URL
+                    page_content = df[df['url'] == selected_url_for_content]['content'].values[0]
+                    keywords_found = df[df['url'] == selected_url_for_content]['keywords_found'].values[0]
 
-                # Автоматичне вилучення знайдених ключових слів
-                keywords_dict = extract_keywords(keywords_found)
-                found_keywords = list(keywords_dict.keys())
+                    # Автоматичне вилучення знайдених ключових слів
+                    keywords_dict = extract_keywords(keywords_found)
+                    found_keywords = list(keywords_dict.keys())
 
-                # Виділяємо знайдені ключові слова у тексті
-                highlighted_content = highlight_keywords(page_content, found_keywords)
+                    # Виділяємо знайдені ключові слова у тексті
+                    highlighted_content = highlight_keywords(page_content, found_keywords)
 
-                # Відображаємо текст з полями, пробілами та відступами
-                st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
-                            unsafe_allow_html=True)
+                    # Відображаємо текст з полями, пробілами та відступами
+                    st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
+                                unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
