@@ -23,7 +23,7 @@ def connect_to_db():
 def get_keyword_data(conn, competitor_name):
     query = f"""
         SELECT url, keywords_count, keywords_found, content, date_checked 
-        FROM {competitor_name}_temp
+        FROM {competitor_name}
         ORDER BY date_checked ASC
     """
     df = pd.read_sql(query, conn)
@@ -39,7 +39,7 @@ def extract_keywords(row):
 def get_keyword_history(conn, competitor_name, keyword):
     query = f"""
         SELECT url, date_checked, keywords_found
-        FROM {competitor_name}_temp
+        FROM {competitor_name}
         WHERE keywords_found ILIKE %s
         ORDER BY date_checked ASC
     """
