@@ -127,7 +127,8 @@ def plot_comparison(df_list, competitor_names, selected_urls):
 def highlight_keywords(text, keywords):
     for keyword in keywords:
         # Виділяємо ключові слова червоним жирним шрифтом
-        text = re.sub(f'({keyword})', r'<span style="color:red; font-weight:bold;">\1</span>', text, flags=re.IGNORECASE)
+        escaped_keyword = re.escape(keyword)  # Захист від спеціальних символів
+        text = re.sub(f'({escaped_keyword})', r'<span style="color:red; font-weight:bold;">\1</span>', text, flags=re.IGNORECASE)
     return text
 
 # Основна функція для відображення даних у Streamlit
@@ -259,12 +260,15 @@ def main():
                     keywords_dict = extract_keywords(keywords_found)
                     found_keywords = list(keywords_dict.keys())
 
-                    # Виділяємо знайдені ключові слова у тексті
-                    highlighted_content = highlight_keywords(page_content, found_keywords)
+                    if found_keywords:
+                        # Виділяємо знайдені ключові слова у тексті
+                        highlighted_content = highlight_keywords(page_content, found_keywords)
 
-                    # Відображаємо текст з полями, пробілами та відступами
-                    st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
-                                unsafe_allow_html=True)
+                        # Відображаємо текст з підсвіченими ключовими словами
+                        st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
+                                    unsafe_allow_html=True)
+                    else:
+                        st.write("No keywords found to highlight.")
 
 if __name__ == "__main__":
     main()
