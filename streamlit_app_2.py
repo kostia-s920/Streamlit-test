@@ -125,8 +125,9 @@ def plot_comparison(df_list, competitor_names, selected_urls):
 
 # Функція для відображення контенту сторінки з підсвічуванням ключових слів
 def highlight_keywords(text, keywords):
+    if not text:
+        return "No content found."
     for keyword in keywords:
-        # Виділяємо ключові слова червоним жирним шрифтом
         escaped_keyword = re.escape(keyword)  # Захист від спеціальних символів
         text = re.sub(f'({escaped_keyword})', r'<span style="color:red; font-weight:bold;">\1</span>', text, flags=re.IGNORECASE)
     return text
@@ -236,7 +237,7 @@ def main():
         if len(selected_urls_for_comparison) == len(selected_competitors):
             plot_comparison(df_list, selected_competitors, selected_urls_for_comparison)
 
-        # Додаємо блок для відображення контенту сторінки
+# Додаємо блок для відображення контенту сторінки
         with st.expander("Click to expand/collapse page content", expanded=False):
             st.subheader("Page Content with Highlighted Keywords")
 
@@ -260,15 +261,12 @@ def main():
                     keywords_dict = extract_keywords(keywords_found)
                     found_keywords = list(keywords_dict.keys())
 
-                    if found_keywords:
-                        # Виділяємо знайдені ключові слова у тексті
-                        highlighted_content = highlight_keywords(page_content, found_keywords)
+                    # Виділяємо знайдені ключові слова у тексті
+                    highlighted_content = highlight_keywords(page_content, found_keywords)
 
-                        # Відображаємо текст з підсвіченими ключовими словами
-                        st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
-                                    unsafe_allow_html=True)
-                    else:
-                        st.write("No keywords found to highlight.")
+                    # Відображаємо текст з полями, пробілами та відступами
+                    st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
+                                unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
