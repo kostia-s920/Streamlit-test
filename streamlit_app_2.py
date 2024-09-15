@@ -27,11 +27,15 @@ def get_keyword_data(conn, competitor_name):
         ORDER BY date_checked ASC
     """
     df = pd.read_sql(query, conn)
+    df['date_checked'] = pd.to_datetime(df['date_checked'], errors='coerce')  # Перетворення дати
+    df = df.dropna(subset=['date_checked']).sort_values(by='date_checked')  # Видалення NaN у колонці дати та сортування
     return df
 
-# Функція для вилучення ключових слів і кількості їх повторень, ігноруючи значення в дужках
+# Функція для вилучення ключових слів і кількості їх повторень
 def extract_keywords(row):
-    pattern = re.findall(r'([\w\s-]+?)\s*-\s*(\d+)\s*разів', row)
+    if pd.isna(row):  # Якщо поле порожнє
+        return {}
+    pattern = re.findall(r'([\w\s-]+?)\s*-\s*(\d+)', row)
     keywords_dict = {match[0].strip(): int(match[1]) for match in pattern}
     return keywords_dict
 
@@ -127,7 +131,7 @@ def plot_comparison(df_list, competitor_names, selected_urls):
 def highlight_keywords(text, keywords):
     for keyword in keywords:
         # Виділяємо ключові слова червоним жирним шрифтом
-        text = re.sub(f'({keyword})', r'<span style="color:red; font-weight:bold;">\1</span>', text, flags=re.IGNORECASE)
+        text = re.sub(f'({re.escape(keyword)})', r'<span style="color:red; font-weight:bold;">\1</span>', text, flags=re.IGNORECASE)
     return text
 
 # Основна функція для відображення даних у Streamlit
@@ -188,7 +192,7 @@ def main():
 
             # Перевіряємо, чи є ключові слова в записі
             if selected_page_data['keywords_found'] and isinstance(selected_page_data['keywords_found'], str):
-                # Витягуємо ключові слова і кількість повторень, ігноруючи значення в дужках
+                # Витягуємо ключові слова і кількість повторень
                 keywords_dict = extract_keywords(selected_page_data['keywords_found'])
 
                 st.write(f"Found keywords on {selected_url_for_keywords}:")
