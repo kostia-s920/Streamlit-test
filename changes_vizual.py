@@ -4,8 +4,6 @@ import numpy as np
 import psycopg2
 import matplotlib.pyplot as plt
 
-
-
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
@@ -123,6 +121,7 @@ def display_contribution_graph(df):
     st.subheader(f"Total Changes: {total_changes}")
 
     st.pyplot(fig)
+
 # Основна функція
 def main():
     st.title("Візуалізація змін контенту як у GitHub")
