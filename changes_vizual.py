@@ -110,7 +110,7 @@ def display_contribution_graph(df):
     days = 7
 
     # Підрахунок кількості змін для кожного дня
-    changes_by_day = df.groupby(df['change_date'].dt.date).sum()
+    changes_by_day = df.groupby(df['change_date'].dt.date).count()
 
     # Визначаємо рівень зміни для кожної дати
     max_changes = changes_by_day['changes'].max()
