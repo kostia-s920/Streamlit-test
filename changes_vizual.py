@@ -97,21 +97,24 @@ def display_contribution_graph(df):
         changes_matrix[weekday, week] = count['changes']  # Кількість змін
 
     # Створюємо графік
-    fig, ax = plt.subplots(figsize=(10, 2))  # Налаштовуємо розмір графіка
+    fig, ax = plt.subplots(figsize=(12, 3))  # Налаштовуємо розмір графіка
 
     # Відображення матриці змін
-    ax.imshow(changes_matrix, cmap='Greens', aspect='auto')
+    cax = ax.matshow(changes_matrix, cmap='Greens', aspect='auto')
 
     # Додаємо місяці як мітки по осі X
     ax.set_yticks(range(7))
     ax.set_yticklabels(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
 
-    # Щоб уникнути помилки, змінюємо кількість підписів на осі X відповідно до кількості локацій
-    ax.set_xticks([4.5, 9.5, 13.5, 18.5, 22.5, 27.5, 31.5, 36.5, 40.5, 45.5, 49.5, 52.5])
+    # Встановлюємо правильні позиції для місяців
+    ax.set_xticks([4.5, 9.5, 13.5, 18.5, 22.5, 27.5, 31.5, 36.5, 40.5, 45.5, 49.5])
     ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 
     # Прибираємо рамки для кращого вигляду
     ax.spines[:].set_visible(False)
+
+    # Додаємо кольорову шкалу для показу кількості змін
+    fig.colorbar(cax)
 
     # Показ загальної кількості змін
     total_changes = int(changes_by_day['changes'].sum())
