@@ -122,7 +122,7 @@ def main():
         if not df.empty:
             render_contribution_chart(df)
         else:
-            st.write("Немає змін для цього конкурента")
+            st.write("Немає змін для цього конкуре нта")
 
 
 if __name__ == "__main__":
