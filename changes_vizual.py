@@ -35,7 +35,7 @@ def create_css_style():
         <style>
         .contribution-graph {
             display: grid;
-            grid-template-columns: repeat(52, 14px); /* 52 тижні */
+            grid-template-columns: repeat(53, 14px); /* 53 тижні */
             grid-template-rows: repeat(7, 14px); /* 7 днів на тиждень */
             grid-gap: 3px;
             justify-content: center;
@@ -48,10 +48,10 @@ def create_css_style():
             border-radius: 2px;
             position: relative;
         }
-        .contribution-square[data-level="1"] { background-color: #c6e48b; }
-        .contribution-square[data-level="2"] { background-color: #7bc96f; }
-        .contribution-square[data-level="3"] { background-color: #239a3b; }
-        .contribution-square[data-level="4"] { background-color: #196127; }
+        .contribution-square[data-level="1"] { background-color: #c6e48b; }  /* Легкі зміни */
+        .contribution-square[data-level="2"] { background-color: #7bc96f; }  /* Середні зміни */
+        .contribution-square[data-level="3"] { background-color: #239a3b; }  /* Значні зміни */
+        .contribution-square[data-level="4"] { background-color: #196127; }  /* Величезні зміни */
         .contribution-square:hover {
             transform: scale(1.2);
             cursor: pointer;
