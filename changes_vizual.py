@@ -1,11 +1,10 @@
 import streamlit as st
-import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
-import numpy as np
+from datetime import datetime
 import psycopg2
 
-# Функція для підключення до бази даних PostgreSQL
+
+# Підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
         connection = psycopg2.connect(
@@ -19,66 +18,56 @@ def connect_to_db():
         st.error(f"Error connecting to database: {e}")
         return None
 
-# Функція для отримання даних зі змін
-def get_data_from_db(conn):
-    query = """
-    SELECT competitor_name, url, field_changed, old_value, new_value, change_date, old_keywords_count, new_keywords_count
-    FROM content_changes_temp
-    """
-    df = pd.read_sql(query, conn)
-    df['change_date'] = pd.to_datetime(df['change_date']).dt.normalize()  # Округлюємо час до початку дня
-    return df
 
-# Запуск Streamlit додатку
+# Основний блок для рендерингу візуалізації
+def render_contribution_chart(change_dates):
+    st.markdown(
+        "<style>.contribution-box{display: inline-block;width: 12px;height: 12px;margin: 2px;background-color: #ebedf0;}.contribution-level-1{background-color: #c6e48b;}.contribution-level-2{background-color: #7bc96f;}.contribution-level-3{background-color: #239a3b;}.contribution-level-4{background-color: #196127;}</style>",
+        unsafe_allow_html=True)
+
+    # Підрахунок кількості змін за день
+    change_dates['change_date'] = pd.to_datetime(change_dates['change_date']).dt.date
+    changes_by_date = change_dates.groupby('change_date').size()
+
+    days_in_year = pd.date_range(start=f'{datetime.now().year}-01-01', end=datetime.now(), freq='D')
+    chart = []
+
+    for day in days_in_year:
+        count = changes_by_date.get(day.date(), 0)
+        if count == 0:
+            level = 'contribution-box'
+        elif count <= 1:
+            level = 'contribution-box contribution-level-1'
+        elif count <= 3:
+            level = 'contribution-box contribution-level-2'
+        elif count <= 5:
+            level = 'contribution-box contribution-level-3'
+        else:
+            level = 'contribution-box contribution-level-4'
+        chart.append(f'<div class="{level}"></div>')
+
+    # Виведення сітки, схожої на GitHub
+    st.markdown('<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">' + ''.join(
+        chart) + '</div>', unsafe_allow_html=True)
+
+
+# Основна функція
 def main():
-    st.title('Візуалізація змін конкурентів')
+    st.title('Візуалізація змін контенту як у GitHub')
 
-    # Підключаємося до бази даних
     conn = connect_to_db()
     if conn:
-        df = get_data_from_db(conn)
+        competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'talentlms_com'])
 
-        # Фільтр за конкурентом та сторінкою
-        competitor = st.selectbox("Виберіть конкурента", df['competitor_name'].unique())
-        filtered_df = df[df['competitor_name'] == competitor]
+        # Запит даних змін для конкурента
+        query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+        df = pd.read_sql(query, conn)
 
-        url = st.selectbox("Виберіть сторінку", filtered_df['url'].unique())
-        filtered_df = filtered_df[filtered_df['url'] == url]
+        if not df.empty:
+            render_contribution_chart(df)
+        else:
+            st.write("Немає змін для цього конкурента")
 
-        # Групування змін за датами для побудови графіка
-        changes_by_date = filtered_df.groupby('change_date').size()
-
-        # Створення матриці для теплової карти
-        dates_range = pd.date_range(start=changes_by_date.index.min(), end=changes_by_date.index.max())
-        changes_matrix = pd.DataFrame(index=dates_range, data=np.zeros(len(dates_range)), columns=['changes'])
-        changes_matrix.loc[changes_by_date.index, 'changes'] = changes_by_date.values
-
-        # Візуалізація теплової карти з градацією кольорів
-        plt.figure(figsize=(10, 2))
-        sns.heatmap(changes_matrix.T, cmap='Greens', cbar=False, linewidths=.5, annot=True, fmt='.0f')
-        plt.title(f'Частота змін для {url}')
-        plt.yticks([])
-
-        # Відображення графіка в Streamlit
-        st.pyplot(plt)
-
-        # Виведення детальної інформації по кожній зміні
-        st.subheader("Деталі змін")
-        selected_date = st.selectbox("Оберіть дату", filtered_df['change_date'].unique())
-        detailed_changes = filtered_df[filtered_df['change_date'] == selected_date]
-
-        for i, row in detailed_changes.iterrows():
-            st.write(f"Поле: {row['field_changed']}")
-            st.write(f"Стара версія: {row['old_value']}")
-            st.write(f"Нова версія: {row['new_value']}")
-            if pd.notna(row['old_keywords_count']) and pd.notna(row['new_keywords_count']):
-                st.write(f"Кількість ключових слів: {row['old_keywords_count']} -> {row['new_keywords_count']}")
-            st.write("---")
-
-        # Закриття з'єднання з базою даних
-        conn.close()
-    else:
-        st.error("Не вдалося підключитися до бази даних.")
 
 if __name__ == "__main__":
     main()
