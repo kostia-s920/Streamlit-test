@@ -2,3 +2,7 @@ streamlit
 matplotlib
 psycopg2-binary
 pandas
+seaborn
+pandas
+numpy
+psycopg2
