@@ -23,7 +23,8 @@ def connect_to_db():
 def render_contribution_chart(change_dates):
     st.markdown(
         "<style>.contribution-box{display: inline-block;width: 12px;height: 12px;margin: 2px;background-color: #ebedf0;}.contribution-level-1{background-color: #c6e48b;}.contribution-level-2{background-color: #7bc96f;}.contribution-level-3{background-color: #239a3b;}.contribution-level-4{background-color: #196127;}</style>",
-        unsafe_allow_html=True)
+        unsafe_allow_html=True
+    )
 
     # Підрахунок кількості змін за день
     change_dates['change_date'] = pd.to_datetime(change_dates['change_date']).dt.date
@@ -31,6 +32,14 @@ def render_contribution_chart(change_dates):
 
     days_in_year = pd.date_range(start=f'{datetime.now().year}-01-01', end=datetime.now(), freq='D')
     chart = []
+
+    # Місяці для відображення
+    months = days_in_year.to_series().dt.strftime('%b').unique()
+
+    # Додавання місяців як підписів
+    st.markdown("<div style='display: flex; justify-content: space-between; width: 750px;'>"
+                + ''.join([f'<span>{month}</span>' for month in months])
+                + "</div>", unsafe_allow_html=True)
 
     for day in days_in_year:
         count = changes_by_date.get(day.date(), 0)
@@ -44,7 +53,7 @@ def render_contribution_chart(change_dates):
             level = 'contribution-box contribution-level-3'
         else:
             level = 'contribution-box contribution-level-4'
-        chart.append(f'<div class="{level}"></div>')
+        chart.append(f'<div class="{level}" title="{day.date()} - {count} changes"></div>')
 
     # Виведення сітки, схожої на GitHub
     st.markdown('<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">' + ''.join(
