@@ -35,15 +35,15 @@ def create_css_style():
         <style>
         .contribution-graph {
             display: grid;
-            grid-template-columns: repeat(53, 12px);
+            grid-template-columns: repeat(52, 14px); /* 52 тижні */
+            grid-template-rows: repeat(7, 14px); /* 7 днів на тиждень */
             grid-gap: 3px;
             justify-content: center;
             align-items: center;
-            position: relative;
         }
         .contribution-square {
-            width: 12px;
-            height: 12px;
+            width: 14px;
+            height: 14px;
             background-color: #ebedf0;
             border-radius: 2px;
             position: relative;
@@ -73,29 +73,8 @@ def create_css_style():
             visibility: visible;
             opacity: 1;
         }
-        .total-changes {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #0b3d13;
-            text-align: center;
-            margin-top: 10px;
-        }
-        .month-label {
-            text-align: center;
-            font-size: 0.8em;
-            color: #666;
-            margin-bottom: 4px;
-        }
         </style>
     """, unsafe_allow_html=True)
-
-# Функція для відображення місяців
-def display_month_labels():
-    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    st.markdown("<div class='contribution-graph'>", unsafe_allow_html=True)
-    for month in months:
-        st.markdown(f"<div class='month-label'>{month}</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
 
 # Функція для відображення графіка у вигляді GitHub-style contribution graph
 def display_github_like_visualization(data):
