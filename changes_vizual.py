@@ -18,80 +18,72 @@ def connect_to_db():
         st.error(f"Error connecting to database: {e}")
         return None
 
-# Отримати дані змін по конкуренту
-def get_changes_data(conn, competitor_name):
-    query = f"""
-        SELECT change_date, COUNT(*) as changes
-        FROM content_changes_temp
-        WHERE competitor_name = '{competitor_name}'
-        GROUP BY change_date
-        ORDER BY change_date
-    """
-    df = pd.read_sql(query, conn)
-    df['change_date'] = pd.to_datetime(df['change_date'])
+# Function to fetch data from the PostgreSQL database
+def fetch_data(conn, query):
+    df = pd.read_sql_query(query, conn)
     return df
 
-# Функція для створення CSS стилю
+# Function to create the CSS style
 def create_css_style():
     st.markdown("""
         <style>
-    .contribution-graph {
-        display: grid;
-        grid-template-columns: repeat(53, 12px);
-        grid-gap: 3px;
-        justify-content: center;
-        align-items: center;
-        position: relative;
-    }
-    .contribution-square {
-        width: 10px;
-        height: 10px;
-        background-color: #ebedf0;
-        border-radius: 2px;
-        position: relative;
-    }
-    .contribution-square[data-level="1"] { background-color: #c6e48b; }
-    .contribution-square[data-level="2"] { background-color: #7bc96f; }
-    .contribution-square[data-level="3"] { background-color: #239a3b; }
-    .contribution-square[data-level="4"] { background-color: #196127; }
-    .contribution-square:hover {
-        transform: scale(1.2);
-        cursor: pointer;
-    }
-    .tooltip {
-        position: absolute;
-        background-color: #333;
-        color: #fff;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        white-space: nowrap;
-        visibility: hidden;
-        z-index: 10;
-        transition: visibility 0.3s, opacity 0.3s ease;
-        opacity: 0;
-    }
-    .contribution-square:hover .tooltip {
-        visibility: visible;
-        opacity: 1;
-    }
-    .total-changes {
-        font-size: 1.2em;
-        font-weight: bold;
-        color: #0b3d13;
-        text-align: center;
-        margin-top: 10px;
-    }
-    .month-label {
-        text-align: center;
-        font-size: 0.8em;
-        color: #666;
-        margin-bottom: 4px;
-    }
-</style>
+        .contribution-graph {
+            display: grid;
+            grid-template-columns: repeat(53, 12px);
+            grid-gap: 3px;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .contribution-square {
+            width: 10px;
+            height: 10px;
+            background-color: #ebedf0;
+            border-radius: 2px;
+            position: relative;
+        }
+        .contribution-square[data-level="1"] { background-color: #c6e48b; }
+        .contribution-square[data-level="2"] { background-color: #7bc96f; }
+        .contribution-square[data-level="3"] { background-color: #239a3b; }
+        .contribution-square[data-level="4"] { background-color: #196127; }
+        .contribution-square:hover {
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+        .tooltip {
+            position: absolute;
+            background-color: #333;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;   
+            visibility: hidden;
+            z-index: 10;
+            transition: visibility 0.3s, opacity 0.3s ease;
+            opacity: 0;
+        }
+        .contribution-square:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+        .total-changes {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #0b3d13;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .month-label {
+            text-align: center;
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        </style>
     """, unsafe_allow_html=True)
 
-# Функція для відображення місяців
+# Function to display the month labels
 def display_month_labels():
     months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     st.markdown("<div class='contribution-graph'>", unsafe_allow_html=True)
@@ -99,72 +91,75 @@ def display_month_labels():
         st.markdown(f"<div class='month-label'>{month}</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Функція для відображення графіка змін у вигляді GitHub-style contribution graph
+# Function to display the contribution graph
 def display_contribution_graph(df):
-    # Групуємо дані за датою і рахуємо кількість змін
+    # Group data by date and count changes
     changes_by_day = df.groupby(df['change_date'].dt.date).count()
 
-    # Створюємо матрицю для відображення змін по днях (7 днів на тиждень і 53 тижні на рік)
+    # Create a matrix to represent changes by day (7 days a week, 53 weeks a year)
     changes_matrix = np.zeros((7, 53))
 
-    # Заповнюємо матрицю змінами
+    # Fill the matrix with changes
     for day, count in changes_by_day.iterrows():
-        week = day.isocalendar()[1] - 1  # Отримуємо номер тижня
-        weekday = day.weekday()  # Отримуємо день тижня (0 = понеділок, 6 = неділя)
-        changes_matrix[weekday, week] = count['changes']  # Кількість змін
+        week = day.isocalendar()[1] - 1  # Get week number
+        weekday = day.weekday()  # Get weekday (0 = Monday, 6 = Sunday)
+        changes_matrix[weekday, week] = count['changes']  # Number of changes
 
-    # Створюємо графік
-    fig, ax = plt.subplots(figsize=(12, 3))  # Налаштовуємо розмір графіка
+    # Create the graph
+    fig, ax = plt.subplots(figsize=(12, 3))  # Adjust graph size
 
-    # Відображення матриці змін
+    # Display the changes matrix
     cax = ax.matshow(changes_matrix, cmap='Greens', aspect='auto')
 
-    # Додаємо місяці як мітки по осі X
+    # Add months as labels along the X-axis
     ax.set_yticks(range(7))
     ax.set_yticklabels(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
 
-    # Встановлюємо правильні позиції для місяців (12 міток на 53 тижні, відповідно кожні ~4 тижні)
+    # Set correct positions for months (12 labels for 53 weeks, approximately every 4 weeks)
     ax.set_xticks([4, 8, 13, 17, 22, 26, 31, 35, 40, 44, 48, 52])
     ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 
-    # Прибираємо рамки для кращого вигляду
+    # Remove frames for better appearance
     ax.spines[:].set_visible(False)
 
-    # Додаємо кольорову шкалу для показу кількості змін
+    # Add a color scale to show the number of changes
     fig.colorbar(cax)
 
-    # Показ загальної кількості змін
+    # Show the total number of changes
     total_changes = int(changes_by_day['changes'].sum())
     st.subheader(f"Total Changes: {total_changes}")
 
     st.pyplot(fig)
 
-# Основна функція
+# Main function
 def main():
-    st.title("Візуалізація змін контенту як у GitHub")
+    st.title("Visualization of Content Changes")
 
-    # Підключаємося до бази даних
+    # Connect to the database
     conn = connect_to_db()
 
     if conn:
         competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com']
 
-        # Дозволяємо вибрати конкурента
-        competitor_name = st.selectbox("Виберіть конкурента", competitors)
+        # Allow user to select a competitor
+        competitor_name = st.selectbox("Select a competitor", competitors)
 
-        # Отримуємо дані змін
-        df = get_changes_data(conn, competitor_name)
+        # Replace with your database query
+        query = f"SELECT change_date, COUNT(*) as changes FROM content_changes_temp WHERE competitor_name = '{competitor_name}' GROUP BY change_date ORDER BY change_date"
 
-        # Додаємо кастомний CSS стиль
+        # Fetch data from the database
+        df = fetch_data(conn, query)
+
+        # Add custom CSS style
         create_css_style()
 
-        # Виводимо графік
+        # Display the graph
         if not df.empty:
             display_contribution_graph(df)
         else:
-            st.write("Немає змін для обраного конкурента.")
+            st.write("No changes found.")
     else:
-        st.error("Не вдалося підключитися до бази даних.")
+        st.error("Failed to connect to the database.")
 
 if __name__ == "__main__":
     main()
