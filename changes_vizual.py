@@ -105,7 +105,9 @@ def display_contribution_graph(df):
     # Додаємо місяці як мітки по осі X
     ax.set_yticks(range(7))
     ax.set_yticklabels(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
-    ax.set_xticks([4.5, 8.5, 13.5, 17.5, 22.5, 26.5, 31.5, 35.5, 40.5, 44.5, 49.5])
+
+    # Щоб уникнути помилки, змінюємо кількість підписів на осі X відповідно до кількості локацій
+    ax.set_xticks([4.5, 9.5, 13.5, 18.5, 22.5, 27.5, 31.5, 36.5, 40.5, 45.5, 49.5, 52.5])
     ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 
     # Прибираємо рамки для кращого вигляду
