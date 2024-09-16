@@ -22,40 +22,7 @@ def connect_to_db():
 # Основний блок для рендерингу візуалізації
 def render_contribution_chart(change_dates):
     st.markdown(
-        """
-        <style>
-        .contribution-box {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            margin: 2px;
-            background-color: #ebedf0;
-            border-radius: 2px;
-            position: relative;
-        }
-        .contribution-level-1 { background-color: #c6e48b; }
-        .contribution-level-2 { background-color: #7bc96f; }
-        .contribution-level-3 { background-color: #239a3b; }
-        .contribution-level-4 { background-color: #196127; }
-        .contribution-box:hover .tooltip {
-            visibility: visible;
-            opacity: 1;
-        }
-        .tooltip {
-            visibility: hidden;
-            opacity: 0;
-            position: absolute;
-            background-color: #333;
-            color: #fff;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            white-space: nowrap;
-            z-index: 10;
-            transition: visibility 0.3s, opacity 0.3s ease;
-        }
-        </style>
-        """,
+        "<style>.contribution-box{display: inline-block;width: 12px;height: 12px;margin: 2px;background-color: #ebedf0;}.contribution-level-1{background-color: #c6e48b;}.contribution-level-2{background-color: #7bc96f;}.contribution-level-3{background-color: #239a3b;}.contribution-level-4{background-color: #196127;}</style>",
         unsafe_allow_html=True
     )
 
@@ -78,33 +45,19 @@ def render_contribution_chart(change_dates):
         count = changes_by_date.get(day.date(), 0)
         if count == 0:
             level = 'contribution-box'
-            tooltip = f'{day.strftime("%d %b %Y")}'
         elif count <= 1:
             level = 'contribution-box contribution-level-1'
-            tooltip = f'{day.strftime("%d %b %Y")} - {count} change'
         elif count <= 3:
             level = 'contribution-box contribution-level-2'
-            tooltip = f'{day.strftime("%d %b %Y")} - {count} changes'
         elif count <= 5:
             level = 'contribution-box contribution-level-3'
-            tooltip = f'{day.strftime("%d %b %Y")} - {count} changes'
         else:
             level = 'contribution-box contribution-level-4'
-            tooltip = f'{day.strftime("%d %b %Y")} - {count} changes'
-
-        chart.append(f"""
-            <div class="{level}">
-                <div class='tooltip'>{tooltip}</div>
-            </div>
-        """)
+        chart.append(f'<div class="{level}" title="{day.date()} - {count} changes"></div>')
 
     # Виведення сітки, схожої на GitHub
-    st.markdown(
-        '<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">'
-        + ''.join(chart)
-        + '</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown('<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">' + ''.join(
+        chart) + '</div>', unsafe_allow_html=True)
 
 
 # Основна функція
@@ -122,7 +75,7 @@ def main():
         if not df.empty:
             render_contribution_chart(df)
         else:
-            st.write("Немає змін для цього конкуре нта")
+            st.write("Немає змін для цього конкурента")
 
 
 if __name__ == "__main__":
