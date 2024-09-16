@@ -1,10 +1,11 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 from datetime import datetime
 import psycopg2
 
 
-# Підключення до бази даних PostgreSQL
+# Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
         connection = psycopg2.connect(
@@ -19,54 +20,106 @@ def connect_to_db():
         return None
 
 
-# Основний блок для рендерингу візуалізації
-def render_contribution_chart(change_dates):
-    st.markdown(
-        "<style>.contribution-box{display: inline-block;width: 12px;height: 12px;margin: 2px;background-color: #ebedf0;}.contribution-level-1{background-color: #c6e48b;}.contribution-level-2{background-color: #7bc96f;}.contribution-level-3{background-color: #239a3b;}.contribution-level-4{background-color: #196127;}</style>",
-        unsafe_allow_html=True)
+# Отримати дані змін по конкуренту
+def get_changes_data(conn, competitor_name):
+    query = f"""
+        SELECT change_date, COUNT(*) as changes
+        FROM content_changes_temp
+        WHERE competitor_name = '{competitor_name}'
+        GROUP BY change_date
+        ORDER BY change_date
+    """
+    df = pd.read_sql(query, conn)
+    df['change_date'] = pd.to_datetime(df['change_date'])
+    return df
 
-    # Підрахунок кількості змін за день
-    change_dates['change_date'] = pd.to_datetime(change_dates['change_date']).dt.date
-    changes_by_date = change_dates.groupby('change_date').size()
 
-    days_in_year = pd.date_range(start=f'{datetime.now().year}-01-01', end=datetime.now(), freq='D')
-    chart = []
+# Функція для створення CSS стилю
+def create_css_style():
+    st.markdown("""
+        <style>
+        .contribution-graph {
+            display: grid;
+            grid-template-columns: repeat(53, 14px);
+            grid-gap: 5px;
+            justify-content: center;
+            align-items: center;
+        }
+        .contribution-square {
+            width: 12px;
+            height: 12px;
+            background-color: #ebedf0;
+            border-radius: 2px;
+            transition: background-color 0.3s ease;
+        }
+        .contribution-square[data-level="1"] { background-color: #c6e48b; }
+        .contribution-square[data-level="2"] { background-color: #7bc96f; }
+        .contribution-square[data-level="3"] { background-color: #239a3b; }
+        .contribution-square[data-level="4"] { background-color: #196127; }
+        .contribution-square[data-level="5"] { background-color: #0b3d13; }
+        .contribution-square:hover {
+            transform: scale(1.2);
+        }
+        .total-changes {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #0b3d13;
+            text-align: center;
+            margin-top: 10px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    for day in days_in_year:
-        count = changes_by_date.get(day.date(), 0)
-        if count == 0:
-            level = 'contribution-box'
-        elif count <= 1:
-            level = 'contribution-box contribution-level-1'
-        elif count <= 3:
-            level = 'contribution-box contribution-level-2'
-        elif count <= 5:
-            level = 'contribution-box contribution-level-3'
-        else:
-            level = 'contribution-box contribution-level-4'
-        chart.append(f'<div class="{level}"></div>')
 
-    # Виведення сітки, схожої на GitHub
-    st.markdown('<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">' + ''.join(
-        chart) + '</div>', unsafe_allow_html=True)
+# Функція для візуалізації змін у вигляді графіка як на GitHub
+def display_contribution_graph(df):
+    weeks = 53  # 52 тижні + поточний
+    days = 7
+
+    # Підрахунок кількості змін для кожного дня
+    changes_by_day = df.groupby(df['change_date'].dt.date).sum()
+
+    # Визначаємо рівень зміни для кожної дати
+    max_changes = changes_by_day['changes'].max()
+    changes_by_day['level'] = (changes_by_day['changes'] / max_changes * 5).apply(np.ceil).astype(int)
+
+    # Показуємо загальну кількість змін
+    total_changes = changes_by_day['changes'].sum()
+    st.markdown(f"<div class='total-changes'>Total Changes: {total_changes}</div>", unsafe_allow_html=True)
+
+    # Візуалізуємо у вигляді "contribution graph"
+    st.markdown("<div class='contribution-graph'>", unsafe_allow_html=True)
+
+    for week in range(weeks):
+        for day in range(days):
+            date = changes_by_day.index[week * 7 + day] if (week * 7 + day) < len(changes_by_day) else None
+            level = changes_by_day.loc[date]['level'] if date in changes_by_day.index else 0
+            st.markdown(f"<div class='contribution-square' data-level='{level}'></div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # Основна функція
 def main():
-    st.title('Візуалізація змін контенту як у GitHub')
+    st.title("Візуалізація змін контенту як у GitHub")
 
+    # Підключаємося до бази даних
     conn = connect_to_db()
+
     if conn:
-        competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'talentlms_com'])
+        competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com']
 
-        # Запит даних змін для конкурента
-        query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}'"
-        df = pd.read_sql(query, conn)
+        # Дозволяємо вибрати конкурента
+        competitor_name = st.selectbox("Виберіть конкурента", competitors)
 
-        if not df.empty:
-            render_contribution_chart(df)
-        else:
-            st.write("Немає змін для цього конкурента")
+        # Отримуємо дані змін
+        df = get_changes_data(conn, competitor_name)
+
+        # Додаємо кастомний CSS стиль
+        create_css_style()
+
+        # Виводимо графік
+        display_contribution_graph(df)
 
 
 if __name__ == "__main__":
