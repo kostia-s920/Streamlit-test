@@ -4,6 +4,8 @@ import numpy as np
 import psycopg2
 import matplotlib.pyplot as plt
 
+
+
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
@@ -106,8 +108,8 @@ def display_contribution_graph(df):
     ax.set_yticks(range(7))
     ax.set_yticklabels(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
 
-    # Встановлюємо правильні позиції для місяців
-    ax.set_xticks([4.5, 9.5, 13.5, 18.5, 22.5, 27.5, 31.5, 36.5, 40.5, 45.5, 49.5])
+    # Встановлюємо правильні позиції для місяців (53 тижні, приблизно кожні 4.4 тижні = 12 місяців)
+    ax.set_xticks([4.5, 8.5, 13.5, 17.5, 22.5, 26.5, 31.5, 35.5, 40.5, 44.5, 49.5])
     ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 
     # Прибираємо рамки для кращого вигляду
@@ -121,7 +123,6 @@ def display_contribution_graph(df):
     st.subheader(f"Total Changes: {total_changes}")
 
     st.pyplot(fig)
-
 # Основна функція
 def main():
     st.title("Візуалізація змін контенту як у GitHub")
