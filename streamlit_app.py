@@ -168,7 +168,7 @@ def main():
         # Фільтруємо дані по вибраним URL
         if selected_urls:
             df = df[df['url'].isin(selected_urls)]
-            if df.empty():
+            if df.empty:
                 st.write("No data available for the selected URLs.")
 
         # Додаємо можливість згорнути/розгорнути таблицю
@@ -211,7 +211,7 @@ def main():
                     for keyword in selected_keywords:
                         st.subheader(f'Historical Trend for Keyword: {keyword}')
                         keyword_history_df = get_keyword_history(conn, competitor_name, keyword)
-                        if not keyword_history_df.empty():
+                        if not keyword_history_df.empty:
                             plot_keyword_history(keyword_history_df, keyword, selected_url_for_keywords, chart_type)
                         else:
                             st.write(f"No historical data found for keyword: {keyword}")
