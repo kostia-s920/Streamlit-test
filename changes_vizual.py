@@ -35,43 +35,60 @@ def get_changes_data(conn, competitor_name):
 def create_css_style():
     st.markdown("""
         <style>
-        .contribution-graph {
-            display: grid;
-            grid-template-columns: repeat(53, 14px);
-            grid-gap: 5px;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-        .contribution-square {
-            width: 12px;
-            height: 12px;
-            background-color: #ebedf0;
-            border-radius: 2px;
-            position: relative;
-        }
-        .contribution-square[data-level="1"] { background-color: #c6e48b; }
-        .contribution-square[data-level="2"] { background-color: #7bc96f; }
-        .contribution-square[data-level="3"] { background-color: #239a3b; }
-        .contribution-square[data-level="4"] { background-color: #196127; }
-        .contribution-square:hover {
-            transform: scale(1.2);
-            cursor: pointer;
-        }
-        .total-changes {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #0b3d13;
-            text-align: center;
-            margin-top: 10px;
-        }
-        .month-label {
-            text-align: center;
-            font-size: 0.8em;
-            color: #666;
-            margin-bottom: 4px;
-        }
-        </style>
+    .contribution-graph {
+        display: grid;
+        grid-template-columns: repeat(53, 12px);
+        grid-gap: 3px;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+    }
+    .contribution-square {
+        width: 10px;
+        height: 10px;
+        background-color: #ebedf0;
+        border-radius: 2px;
+        position: relative;
+    }
+    .contribution-square[data-level="1"] { background-color: #c6e48b; }
+    .contribution-square[data-level="2"] { background-color: #7bc96f; }
+    .contribution-square[data-level="3"] { background-color: #239a3b; }
+    .contribution-square[data-level="4"] { background-color: #196127; }
+    .contribution-square:hover {
+        transform: scale(1.2);
+        cursor: pointer;
+    }
+    .tooltip {
+        position: absolute;
+        background-color: #333;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        visibility: hidden;
+        z-index: 10;
+        transition: visibility 0.3s, opacity 0.3s ease;
+        opacity: 0;
+    }
+    .contribution-square:hover .tooltip {
+        visibility: visible;
+        opacity: 1;
+    }
+    .total-changes {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #0b3d13;
+        text-align: center;
+        margin-top: 10px;
+    }
+    .month-label {
+        text-align: center;
+        font-size: 0.8em;
+        color: #666;
+        margin-bottom: 4px;
+    }
+</style>
     """, unsafe_allow_html=True)
 
 # Функція для відображення місяців
