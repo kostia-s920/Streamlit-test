@@ -23,7 +23,7 @@ def connect_to_db():
 def get_keyword_data(conn, competitor_name):
     query = f"""
         SELECT url, keywords_count, keywords_found, content, date_checked 
-        FROM {competitor_name}
+        FROM {competitor_name}_temp
         ORDER BY date_checked ASC
     """
     df = pd.read_sql(query, conn)
@@ -39,7 +39,7 @@ def extract_keywords(row):
 def get_keyword_history(conn, competitor_name, keyword):
     query = f"""
         SELECT url, date_checked, keywords_found
-        FROM {competitor_name}
+        FROM {competitor_name}_temp
         WHERE keywords_found ILIKE %s
         ORDER BY date_checked ASC
     """
@@ -168,7 +168,7 @@ def main():
         # Фільтруємо дані по вибраним URL
         if selected_urls:
             df = df[df['url'].isin(selected_urls)]
-            if df.empty():
+            if df.empty:
                 st.write("No data available for the selected URLs.")
 
         # Додаємо можливість згорнути/розгорнути таблицю
