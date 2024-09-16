@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import psycopg2
 
+
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
@@ -16,6 +17,7 @@ def connect_to_db():
         st.error(f"Error connecting to database: {e}")
         return None
 
+
 # Отримати дані змін по конкуренту
 def get_changes_data(conn, competitor_name):
     query = f"""
@@ -28,6 +30,7 @@ def get_changes_data(conn, competitor_name):
     df = pd.read_sql(query, conn)
     df['change_date'] = pd.to_datetime(df['change_date'])
     return df
+
 
 # Функція для створення CSS стилю
 def create_css_style():
@@ -76,7 +79,8 @@ def create_css_style():
         </style>
     """, unsafe_allow_html=True)
 
-# Функція для відображення графіка у вигляді GitHub-style contribution graph
+
+# Функція для відображення графіка змін у вигляді GitHub-style contribution graph
 def display_github_like_visualization(data):
     create_css_style()  # Виклик функції для додавання CSS стилів
 
@@ -92,18 +96,34 @@ def display_github_like_visualization(data):
         """, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
+
 # Функція для перетворення даних у формат для візуалізації
 def prepare_data_for_visualization(df):
     days = []
     max_changes = df['changes'].max()
-    for _, row in df.iterrows():
-        level = min(4, max(1, int(row['changes'] / max_changes * 4)))  # Рівень змін від 1 до 4
+    # Потрібно враховувати всі дати для коректного розміщення у сітці
+    start_date = df['change_date'].min()
+    end_date = df['change_date'].max()
+
+    all_dates = pd.date_range(start=start_date, end=end_date, freq='D')
+
+    for date in all_dates:
+        if date in df['change_date'].values:
+            row = df[df['change_date'] == date].iloc[0]
+            changes = row['changes']
+            level = min(4, max(1, int(row['changes'] / max_changes * 4)))  # Рівень змін від 1 до 4
+        else:
+            changes = 0
+            level = 0
+
         days.append({
-            "date": row['change_date'].strftime('%Y-%m-%d'),
-            "changes": row['changes'],
+            "date": date.strftime('%Y-%m-%d'),
+            "changes": changes,
             "level": level
         })
+
     return {"days": days}
+
 
 # Основна функція
 def main():
@@ -131,6 +151,7 @@ def main():
             st.write("Немає змін для обраного конкурента.")
     else:
         st.error("Не вдалося підключитися до бази даних.")
+
 
 if __name__ == "__main__":
     main()
