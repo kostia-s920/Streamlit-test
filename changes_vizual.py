@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import psycopg2
 
-
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
@@ -17,7 +16,6 @@ def connect_to_db():
         st.error(f"Error connecting to database: {e}")
         return None
 
-
 # Отримати дані змін по конкуренту
 def get_changes_data(conn, competitor_name):
     query = f"""
@@ -30,7 +28,6 @@ def get_changes_data(conn, competitor_name):
     df = pd.read_sql(query, conn)
     df['change_date'] = pd.to_datetime(df['change_date'])
     return df
-
 
 # Функція для створення CSS стилю
 def create_css_style():
@@ -79,7 +76,6 @@ def create_css_style():
         </style>
     """, unsafe_allow_html=True)
 
-
 # Функція для відображення графіка змін у вигляді GitHub-style contribution graph
 def display_github_like_visualization(data):
     create_css_style()  # Виклик функції для додавання CSS стилів
@@ -89,21 +85,26 @@ def display_github_like_visualization(data):
         level = entry['level']
         changes = entry['changes']
         date = entry['date']
-        st.markdown(f"""
-            <div class='contribution-square' data-level='{level}'>
-                <span class='tooltip'>{changes} changes on {date}</span>
-            </div>
-        """, unsafe_allow_html=True)
+        if level == 0:
+            st.markdown(f"""
+                <div class='contribution-square' data-level='{level}'>
+                    <span class='tooltip'>{date}</span>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+                <div class='contribution-square' data-level='{level}'>
+                    <span class='tooltip'>{changes} changes on {date}</span>
+                </div>
+            """, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
-
 
 # Функція для перетворення даних у формат для візуалізації
 def prepare_data_for_visualization(df):
     days = []
-    max_changes = df['changes'].max()
-    # Потрібно враховувати всі дати для коректного розміщення у сітці
-    start_date = df['change_date'].min()
-    end_date = df['change_date'].max()
+    max_changes = df['changes'].max() if not df.empty else 0
+    start_date = pd.to_datetime(f"{pd.Timestamp.today().year}-01-01")
+    end_date = pd.to_datetime(f"{pd.Timestamp.today().year}-12-31")
 
     all_dates = pd.date_range(start=start_date, end=end_date, freq='D')
 
@@ -123,7 +124,6 @@ def prepare_data_for_visualization(df):
         })
 
     return {"days": days}
-
 
 # Основна функція
 def main():
@@ -151,7 +151,6 @@ def main():
             st.write("Немає змін для обраного конкурента.")
     else:
         st.error("Не вдалося підключитися до бази даних.")
-
 
 if __name__ == "__main__":
     main()
