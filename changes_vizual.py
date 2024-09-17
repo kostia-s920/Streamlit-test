@@ -131,10 +131,14 @@ def main():
             df = pd.read_sql(query, conn)
 
             if not df.empty:
-                st.subheader(f"Зміни для сторінки: {page}")
+                # Відображення заголовка сторінки та візуалізація змін, стилізовані для компактного відображення
+                st.markdown(f"<p style='font-size:12px;color:gray;'>Зміни для сторінки: {page}</p>",
+                            unsafe_allow_html=True)
                 render_contribution_chart(df)
             else:
-                st.write("Немає змін для цієї сторінки.")
+                # Повідомлення про відсутність змін, відображене дрібним шрифтом
+                st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
+                            unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
