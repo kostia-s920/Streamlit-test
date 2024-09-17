@@ -60,39 +60,24 @@ def main():
         # Крок 1: Вибір конкурента
         competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'talentlms_com'])
 
-        # Додатковий перемикач для вибору режиму перегляду
-        view_all = st.checkbox("Показати всі зміни конкурента")
+        # Крок 2: Вибір сторінки конкурента
+        page_query = f"SELECT DISTINCT url FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+        pages = pd.read_sql(page_query, conn)['url'].tolist()
 
-        if view_all:
-            # Якщо обрано перегляд всіх змін, виконуємо запит для всіх змін конкурента
-            query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}'"
-            df = pd.read_sql(query, conn)
+        if not pages:
+            st.write("Немає доступних сторінок для цього конкурента.")
+            return
 
-            if not df.empty:
-                st.subheader(f"Загальні зміни для {competitor}")
-                render_contribution_chart(df)
-            else:
-                st.write("Немає змін для цього конкурента.")
+        page = st.selectbox("Виберіть сторінку", pages)
+
+        # Крок 3: Отримання даних змін для вибраної сторінки
+        query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}' AND url = '{page}'"
+        df = pd.read_sql(query, conn)
+
+        if not df.empty:
+            render_contribution_chart(df)
         else:
-            # Якщо перегляд змін для окремих сторінок
-            page_query = f"SELECT DISTINCT url FROM content_changes_temp WHERE competitor_name = '{competitor}'"
-            pages = pd.read_sql(page_query, conn)['url'].tolist()
-
-            if not pages:
-                st.write("Немає доступних сторінок для цього конкурента.")
-                return
-
-            page = st.selectbox("Виберіть сторінку", pages)
-
-            # Отримання даних змін для вибраної сторінки
-            query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}' AND url = '{page}'"
-            df = pd.read_sql(query, conn)
-
-            if not df.empty:
-                st.subheader(f"Зміни для сторінки: {page}")
-                render_contribution_chart(df)
-            else:
-                st.write("Немає змін для цієї сторінки.")
+            st.write("Немає змін для цієї сторінки.")
 
 
 if __name__ == "__main__":
