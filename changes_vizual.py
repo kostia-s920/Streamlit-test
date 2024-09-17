@@ -100,7 +100,7 @@ def main():
     conn = connect_to_db()
     if conn:
         # Крок 1: Вибір конкурента
-        competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'talentlms_com'])
+        competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com'])
 
         # Додатковий перемикач для вибору режиму перегляду
         view_all = st.checkbox("Показати всі зміни конкурента")
