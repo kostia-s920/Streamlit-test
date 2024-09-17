@@ -103,15 +103,15 @@ def main():
         competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'talentlms_com'])
 
         # Крок 2: Отримання списку сторінок для обраного конкурента
-        page_query = f"SELECT DISTINCT page_url FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+        page_query = f"SELECT DISTINCT url FROM content_changes_temp WHERE competitor_name = '{competitor}'"
         pages_df = pd.read_sql(page_query, conn)
 
         if not pages_df.empty:
             # Вибір сторінки для обраного конкурента
-            page = st.selectbox("Виберіть сторінку конкурента", pages_df['page_url'].tolist())
+            page = st.selectbox("Виберіть сторінку конкурента", pages_df['url'].tolist())
 
             # Крок 3: Запит даних змін для конкретної сторінки конкурента
-            query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}' AND page_url = '{page}'"
+            query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}' AND url = '{page}'"
             df = pd.read_sql(query, conn)
 
             if not df.empty:
