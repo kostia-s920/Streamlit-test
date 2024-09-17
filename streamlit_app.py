@@ -207,14 +207,18 @@ def render_contribution_chart(change_dates):
         f'<div style="display: flex;">{week_days_html}<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">{grid_html}</div></div>',
         unsafe_allow_html=True)
 
+
 # Основна функція для відображення даних у Streamlit
-    def main():
-        # Підключаємося до бази даних
-        conn = connect_to_db()
+def main():
+    # Підключаємося до бази даних
+    conn = connect_to_db()
+
+    if conn:
+        st.title("Аналіз ключових слів конкурентів")
 
         # Візуалізація змін контенту
         with st.expander("Візуалізація змін контенту", expanded=False):
-            st.title('Візуалізація змін контенту')
+            st.subheader('Візуалізація змін контенту для конкурентів')
             competitor = st.selectbox("Виберіть конкурента",
                                       ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com'])
 
@@ -250,104 +254,94 @@ def render_contribution_chart(change_dates):
                     st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
                                 unsafe_allow_html=True)
 
-        st.write("")  # Додаємо простір
-        st.markdown("<div style='background-color: lightgray; height: 2px;'></div>",
-                    unsafe_allow_html=True)  # Додаємо лінію розділювача
-        st.write("")
+        st.markdown("<hr>", unsafe_allow_html=True)
 
         # Keyword Count and Historical Analysis
-        with st.expander("Keyword Count and Historical Analysis for Competitors", expanded=False):
-            st.title('Keyword Count and Historical Analysis for Competitors')
+        with st.expander("Аналіз ключових слів для конкурентів", expanded=False):
+            st.subheader('Аналіз ключових слів для конкурентів')
 
-            if conn:
-                competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com']
-                competitor_name = st.selectbox("Select Competitor", competitors, key="competitor_select_1")
-                df = get_keyword_data(conn, competitor_name)
+            competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com']
+            competitor_name = st.selectbox("Виберіть конкурента", competitors)
+            df = get_keyword_data(conn, competitor_name)
 
-                selected_urls = st.multiselect('Select URLs', df['url'].unique(), max_selections=5, key="url_select")
-                if not df.empty:
-                    start_date = pd.to_datetime(
-                        st.date_input('Start Date', df['date_checked'].min(), key="start_date")).date()
-                    end_date = pd.to_datetime(
-                        st.date_input('End Date', df['date_checked'].max(), key="end_date")).date()
-                    df['date_checked'] = pd.to_datetime(df['date_checked']).dt.date
-                    df = df[(df['date_checked'] >= start_date) & (df['date_checked'] <= end_date)]
+            if not df.empty:
+                selected_urls = st.multiselect('Виберіть URL', df['url'].unique(), max_selections=5)
+
+                # Фільтр по датах
+                start_date = pd.to_datetime(st.date_input('Початкова дата', df['date_checked'].min())).date()
+                end_date = pd.to_datetime(st.date_input('Кінцева дата', df['date_checked'].max())).date()
+                df['date_checked'] = pd.to_datetime(df['date_checked']).dt.date
+                df = df[(df['date_checked'] >= start_date) & (df['date_checked'] <= end_date)]
 
                 if selected_urls:
                     df = df[df['url'].isin(selected_urls)]
-                    if not df.empty:
-                        st.write("Data Table:")
-                        st.write(df)
 
-                        st.subheader(f'Keyword Trend for {competitor_name}')
-                        plot_keyword_trend(df, competitor_name)
+                if not df.empty:
+                    st.write("Таблиця з даними:")
+                    st.write(df)
 
-                        selected_url_for_keywords = st.selectbox('Select URL to view found keywords',
-                                                                 df['url'].unique(), key="keyword_url_select")
+                    st.subheader(f'Тренд ключових слів для {competitor_name}')
+                    plot_keyword_trend(df, competitor_name)
 
-                        if selected_url_for_keywords:
-                            selected_page_data = df[df['url'] == selected_url_for_keywords].iloc[0]
-                            if selected_page_data['keywords_found'] and isinstance(selected_page_data['keywords_found'],
-                                                                                   str):
-                                keywords_dict = extract_keywords(selected_page_data['keywords_found'])
-                                st.write(f"Found keywords on {selected_url_for_keywords}:")
-                                st.write(keywords_dict)
+                    selected_url_for_keywords = st.selectbox('Виберіть URL для перегляду знайдених ключових слів',
+                                                             df['url'].unique())
 
-                                selected_keywords = st.multiselect('Select keywords to analyze historical occurrences',
-                                                                   list(keywords_dict.keys()),
-                                                                   key="keyword_multiselect")
-                                if selected_keywords:
-                                    chart_type = st.selectbox("Select Chart Type",
-                                                              ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart',
-                                                               'Step Chart'], key="chart_select")
-                                    for keyword in selected_keywords:
-                                        st.subheader(f'Historical Trend for Keyword: {keyword}')
-                                        keyword_history_df = get_keyword_history(conn, competitor_name, keyword)
-                                        if not keyword_history_df.empty:
-                                            plot_keyword_history(keyword_history_df, keyword, selected_url_for_keywords,
-                                                                 chart_type)
-                                        else:
-                                            st.write(f"No historical data found for keyword: {keyword}")
+                    if selected_url_for_keywords:
+                        selected_page_data = df[df['url'] == selected_url_for_keywords].iloc[0]
+                        if selected_page_data['keywords_found'] and isinstance(selected_page_data['keywords_found'],
+                                                                               str):
+                            keywords_dict = extract_keywords(selected_page_data['keywords_found'])
 
-        st.write("")
-        st.markdown("<div style='background-color: lightgray; height: 2px;'></div>",
-                    unsafe_allow_html=True)  # Додаємо лінію розділювача
-        st.write("")
+                            st.write(f"Знайдені ключові слова на {selected_url_for_keywords}:")
+                            st.write(keywords_dict)
 
-        # Додаємо блок для порівняння конкурентів
-        with st.expander("Comparison of Keywords Between Competitors", expanded=False):
-            st.title('Comparison of Keywords Between Competitors')
-            selected_competitors = st.multiselect("Select Competitors for Comparison", competitors,
-                                                  default=competitors[:2], key="competitors_multiselect")
+                            selected_keywords = st.multiselect('Виберіть ключові слова для аналізу історії',
+                                                               list(keywords_dict.keys()))
+
+                            if selected_keywords:
+                                chart_type = st.selectbox("Тип графіка",
+                                                          ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart',
+                                                           'Step Chart'])
+                                for keyword in selected_keywords:
+                                    st.subheader(f'Історія для ключового слова: {keyword}')
+                                    keyword_history_df = get_keyword_history(conn, competitor_name, keyword)
+                                    if not keyword_history_df.empty:
+                                        plot_keyword_history(keyword_history_df, keyword, selected_url_for_keywords,
+                                                             chart_type)
+                                    else:
+                                        st.write(f"Немає даних для ключового слова: {keyword}")
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+
+        # Порівняння конкурентів
+        with st.expander("Порівняння ключових слів між конкурентами", expanded=False):
+            st.subheader('Порівняння ключових слів між конкурентами')
+            selected_competitors = st.multiselect("Виберіть конкурентів для порівняння", competitors,
+                                                  default=competitors[:2])
             df_list = [get_keyword_data(conn, competitor) for competitor in selected_competitors]
 
             selected_urls_for_comparison = []
             for competitor, df in zip(selected_competitors, df_list):
-                selected_url = st.selectbox(f'Select URL for {competitor}', df['url'].unique(),
-                                            key=f"url_select_{competitor}")
+                selected_url = st.selectbox(f'Виберіть URL для {competitor}', df['url'].unique())
                 selected_urls_for_comparison.append(selected_url)
 
             if len(selected_urls_for_comparison) == len(selected_competitors):
                 plot_comparison(df_list, selected_competitors, selected_urls_for_comparison)
 
-        st.write("")
-        st.markdown("<div style='background-color: lightgray; height: 2px;'></div>",
-                    unsafe_allow_html=True)  # Додаємо лінію розділювача
-        st.write("")
+        st.markdown("<hr>", unsafe_allow_html=True)
 
-        # Додаємо блок для відображення контенту сторінки
-        with st.expander("Page Content with Highlighted Keywords", expanded=False):
-            st.title('Page Content with Highlighted Keywords')
-
-            competitor_name_content = st.selectbox("Select Competitor", competitors, key="competitor_content_select")
+        # Контент сторінки
+        with st.expander("Контент сторінки з підсвіченими ключовими словами", expanded=False):
+            st.subheader('Контент сторінки з підсвіченими ключовими словами')
+            competitor_name_content = st.selectbox("Виберіть конкурента для перегляду контенту", competitors)
             df_content = get_keyword_data(conn, competitor_name_content)
 
             if not df_content.empty:
-                selected_url_for_content = st.selectbox('Select URL to view content', df_content['url'].unique(),
-                                                        key="url_content_select")
-                selected_date_for_content = st.selectbox('Select Date to view content',
+                selected_url_for_content = st.selectbox('Виберіть URL для перегляду контенту',
+                                                        df_content['url'].unique())
+                selected_date_for_content = st.selectbox('Виберіть дату',
                                                          df_content[df_content['url'] == selected_url_for_content][
-                                                             'date_checked'].dt.date.unique(), key="date_select")
+                                                             'date_checked'].dt.date.unique())
 
                 if selected_date_for_content:
                     page_content_data = df_content[(df_content['url'] == selected_url_for_content) & (
@@ -355,10 +349,11 @@ def render_contribution_chart(change_dates):
                     page_content = page_content_data['content'].values[0]
                     keywords_found = page_content_data['keywords_found'].values[0]
                     keywords_dict = extract_keywords(keywords_found)
-                    found_keywords = list(keywords_dict.keys())
-                    highlighted_content = highlight_keywords(page_content, found_keywords)
+                    highlighted_content = highlight_keywords(page_content, list(keywords_dict.keys()))
+
                     st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
                                 unsafe_allow_html=True)
 
-    if __name__ == "__main__":
-        main()
+
+if __name__ == "__main__":
+    main()
