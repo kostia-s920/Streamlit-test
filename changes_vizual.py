@@ -4,7 +4,6 @@ from datetime import datetime
 import psycopg2
 
 
-
 # Підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
@@ -26,8 +25,8 @@ def render_contribution_chart_by_months(change_dates):
         """
         <style>
         .contribution-box {
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             margin: 2px;
             display: inline-block;
             background-color: #ebedf0;
@@ -39,6 +38,7 @@ def render_contribution_chart_by_months(change_dates):
         .contribution-box-container {
             display: flex;
             justify-content: space-around;
+            flex-wrap: wrap;
         }
         .month-column {
             display: grid;
@@ -71,7 +71,8 @@ def render_contribution_chart_by_months(change_dates):
     st.markdown('<div class="contribution-box-container">', unsafe_allow_html=True)
 
     for month, days in months.items():
-        month_html = f'<div class="month-column"><div class="month-title">{month}</div>'
+        # Генерація днів для кожного місяця
+        month_html = f'<div><div class="month-title">{month}</div><div class="month-column">'
 
         for day in range(1, days + 1):
             # Формуємо дату для кожного дня місяця
@@ -93,7 +94,7 @@ def render_contribution_chart_by_months(change_dates):
             # Додаємо квадратик для кожного дня
             month_html += f'<div class="{level}" title="{date} - {count} changes"></div>'
 
-        month_html += '</div>'
+        month_html += '</div></div>'
 
         st.markdown(month_html, unsafe_allow_html=True)
 
