@@ -207,7 +207,7 @@ def render_contribution_chart(change_dates):
         f'<div style="display: flex;">{week_days_html}<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">{grid_html}</div></div>',
         unsafe_allow_html=True)
 
-    # Основна функція для відображення даних у Streamlit
+# Основна функція для відображення даних у Streamlit
     def main():
         # Підключаємося до бази даних
         conn = connect_to_db()
