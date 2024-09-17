@@ -280,11 +280,7 @@ def main():
                 if selected_urls:
                     df = df[df['url'].isin(selected_urls)]
 
-                if not df.empty:
-                    st.write("Таблиця з даними:")
-                    st.write(df)
-
-                    st.subheader(f'Тренд ключових слів для {competitor_name}')
+                    st.subheader(f'Тренд кількості ключових слів для {competitor_name}')
                     plot_keyword_trend(df, competitor_name)
 
                     selected_url_for_keywords = st.selectbox('Виберіть URL для перегляду знайдених ключових слів',
