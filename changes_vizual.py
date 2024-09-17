@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import psycopg2
+from calendar import monthrange
 
 
 # Підключення до бази даних PostgreSQL
@@ -19,24 +20,27 @@ def connect_to_db():
         return None
 
 
-# Додаємо місяці над сіткою
+# Функція для отримання кількості днів у кожному місяці
+def get_month_days():
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    days_in_months = [monthrange(datetime.now().year, i + 1)[1] for i in range(12)]
+    return list(zip(months, days_in_months))
+
+
+# Оновлюємо функцію рендерингу місяців
 def render_month_labels():
-    months = {
-        'Jan': 4, 'Feb': 4, 'Mar': 5, 'Apr': 4, 'May': 4, 'Jun': 4,
-        'Jul': 5, 'Aug': 4, 'Sep': 4, 'Oct': 5, 'Nov': 4, 'Dec': 5
-    }
+    months_data = get_month_days()
+    months_html = '<div class="month-labels">'
 
-    months_html = '<div style="display: grid; grid-template-columns: repeat(52, 10px); grid-gap: 2px;">'
-
-    for month, span in months.items():
-        months_html += f'<div style="grid-column: span {span}; text-align: center;">{month}</div>'
+    for month, days in months_data:
+        months_html += f'<div style="grid-column: span {days}; text-align: center;">{month}</div>'
 
     months_html += '</div>'
 
     return months_html
 
 
-# Основний блок для рендерингу візуалізації
+# Оновлений блок для рендерингу візуалізації з правильним відображенням місяців
 def render_contribution_chart(change_dates):
     st.markdown(
         """
@@ -58,7 +62,7 @@ def render_contribution_chart(change_dates):
         }
         .contribution-box-container-inner {
             display: grid;
-            grid-template-columns: repeat(52, 10px);
+            grid-template-columns: repeat(365, 10px); /* 365 днів на рік */
             grid-gap: 2px;
         }
         @media (max-width: 600px) {
@@ -67,12 +71,12 @@ def render_contribution_chart(change_dates):
                 height: 8px;
             }
             .contribution-box-container-inner {
-                grid-template-columns: repeat(52, 8px);
+                grid-template-columns: repeat(365, 8px); /* Для мобільних пристроїв */
             }
         }
         .month-labels {
             display: grid;
-            grid-template-columns: repeat(52, 10px);
+            grid-template-columns: repeat(365, 10px); /* 365 днів на рік */
             grid-gap: 2px;
             margin-bottom: 4px;
         }
@@ -125,8 +129,9 @@ def render_contribution_chart(change_dates):
             week_days_html += '<div></div>'
     week_days_html += '</div>'
 
-    # Додаємо горизонтальний скрол з підтримкою адаптації для мобільних
+    # Додаємо горизонтальний скрол
     st.markdown('<div class="contribution-box-container">', unsafe_allow_html=True)
+
     st.markdown(render_month_labels(), unsafe_allow_html=True)
     st.markdown(
         f'<div style="display: flex;">{week_days_html}<div class="contribution-box-container-inner">{grid_html}</div></div>',
