@@ -258,8 +258,8 @@ def main():
         st.markdown("<hr>", unsafe_allow_html=True)
 
         # Keyword Count and Historical Analysis
-        with st.expander("Аналіз ключових слів для конкурентів", expanded=False):
-            st.subheader('Аналіз ключових слів для конкурентів')
+        with st.expander("Загальна кількість ключових слів", expanded=False):
+            st.subheader('Аналіз Загальної кількості ключових слів конкурента')
 
             competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com']
             competitor_name = st.selectbox("Виберіть конкурента", competitors, key="keyword_competitor_selectbox")
