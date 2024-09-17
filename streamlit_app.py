@@ -273,6 +273,8 @@ def main():
                     st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
                                 unsafe_allow_html=True)
 
+        st.markdown("<hr>", unsafe_allow_html=True)
+
         # Keyword Count and Historical Analysis
         with st.expander("Загальна кількість ключових слів", expanded=False):
             st.subheader('Аналіз Загальної кількості ключових слів конкурента')
