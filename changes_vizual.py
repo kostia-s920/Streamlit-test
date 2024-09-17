@@ -26,7 +26,7 @@ def render_month_labels():
         'Jul': 5, 'Aug': 4, 'Sep': 4, 'Oct': 5, 'Nov': 4, 'Dec': 5
     }
 
-    months_html = '<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">'
+    months_html = '<div style="display: grid; grid-template-columns: repeat(52, 10px); grid-gap: 2px;">'
 
     for month, span in months.items():
         months_html += f'<div style="grid-column: span {span}; text-align: center;">{month}</div>'
@@ -39,7 +39,30 @@ def render_month_labels():
 # Основний блок для рендерингу візуалізації
 def render_contribution_chart(change_dates):
     st.markdown(
-        "<style>.contribution-box{display: inline-block;width: 10px;height: 10px;margin: 2px;background-color: #ebedf0;}.contribution-level-1{background-color: #c6e48b;}.contribution-level-2{background-color: #7bc96f;}.contribution-level-3{background-color: #239a3b;}.contribution-level-4{background-color: #196127;}</style>",
+        """
+        <style>
+        .contribution-box {
+            width: 10px;
+            height: 10px;
+            margin: 2px;
+            display: inline-block;
+            background-color: #ebedf0;
+        }
+        .contribution-level-1 { background-color: #c6e48b; }
+        .contribution-level-2 { background-color: #7bc96f; }
+        .contribution-level-3 { background-color: #239a3b; }
+        .contribution-level-4 { background-color: #196127; }
+        .contribution-box-container {
+            overflow-x: auto;
+            max-width: 100%;
+        }
+        .contribution-box-container-inner {
+            display: grid;
+            grid-template-columns: repeat(52, 10px);
+            grid-gap: 2px;
+        }
+        </style>
+        """,
         unsafe_allow_html=True
     )
 
@@ -71,7 +94,7 @@ def render_contribution_chart(change_dates):
 
     grid_html = ''
     for week in range(52):
-        week_html = '<div style="display: grid; grid-template-rows: repeat(7, 14px); grid-gap: 2px;">'
+        week_html = '<div style="display: grid; grid-template-rows: repeat(7, 10px); grid-gap: 2px;">'
         for day_index in range(7):
             index = week * 7 + day_index
             if index < len(chart):
@@ -79,7 +102,7 @@ def render_contribution_chart(change_dates):
         week_html += '</div>'
         grid_html += week_html
 
-    week_days_html = '<div style="display: grid; grid-template-rows: repeat(7, 14px); grid-gap: 2px;">'
+    week_days_html = '<div style="display: grid; grid-template-rows: repeat(7, 10px); grid-gap: 2px;">'
     for i in range(7):
         if i in [0, 2, 4]:
             week_days_html += f'<div>{week_days[[0, 2, 4].index(i)]}</div>'
@@ -87,10 +110,18 @@ def render_contribution_chart(change_dates):
             week_days_html += '<div></div>'
     week_days_html += '</div>'
 
+    # Додаємо горизонтальний скрол
+    st.markdown('<div class="contribution-box-container">', unsafe_allow_html=True)
+
+    # Додаємо місяці над сіткою
     st.markdown(render_month_labels(), unsafe_allow_html=True)
+
+    # Додаємо саму сітку змін
     st.markdown(
-        f'<div style="display: flex;">{week_days_html}<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">{grid_html}</div></div>',
-        unsafe_allow_html=True)
+        f'<div style="display: flex;">{week_days_html}<div class="contribution-box-container-inner">{grid_html}</div></div>',
+        unsafe_allow_html=True
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # Основна функція
@@ -100,7 +131,8 @@ def main():
     conn = connect_to_db()
     if conn:
         # Крок 1: Вибір конкурента
-        competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com'])
+        competitor = st.selectbox("Виберіть конкурента",
+                                  ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com'])
 
         # Додатковий перемикач для вибору режиму перегляду
         view_all = st.checkbox("Показати всі зміни конкурента")
@@ -131,12 +163,12 @@ def main():
             df = pd.read_sql(query, conn)
 
             if not df.empty:
-                # Відображення заголовка сторінки та візуалізація змін, стилізовані для компактного відображення
+                # Відображення заголовка сторінки та візуалізація змін
                 st.markdown(f"<p style='font-size:12px;color:gray;'>Зміни для сторінки: {page}</p>",
                             unsafe_allow_html=True)
                 render_contribution_chart(df)
             else:
-                # Повідомлення про відсутність змін, відображене дрібним шрифтом
+                # Повідомлення про відсутність змін
                 st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
                             unsafe_allow_html=True)
 
