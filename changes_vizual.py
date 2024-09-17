@@ -38,6 +38,12 @@ def render_contribution_chart(change_dates):
     total_days = (end_of_year - start_of_year).days + 1
     days = [start_of_year + timedelta(days=i) for i in range(total_days)]
 
+    # Місяці для відображення на осі X
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    # Підписи для осі Y (понеділок, середа, п'ятниця)
+    week_days = ['Mon', 'Wed', 'Fri']
+
     # Заповнюємо квадратики змінами або залишаємо пустими
     chart = []
     for day in days:
@@ -64,6 +70,31 @@ def render_contribution_chart(change_dates):
                 week_html += chart[index]
         week_html += '</div>'
         grid_html += week_html
+
+        # Додаємо місяці над сіткою
+    months_html = '<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">'
+    month_pos = [4, 8, 13, 17, 22, 26, 31, 35, 40, 44, 48, 52]
+    for i in range(52):
+        if i in month_pos:
+            months_html += f'<div style="text-align: center;">{months[month_pos.index(i)]}</div>'
+        else:
+            months_html += '<div></div>'
+    months_html += '</div>'
+
+    # Додаємо дні тижня зліва від сітки
+    week_days_html = '<div style="display: grid; grid-template-rows: repeat(7, 14px); grid-gap: 2px;">'
+    for i in range(7):
+        if i in [0, 2, 4]:  # Понеділок, середа, п'ятниця
+            week_days_html += f'<div>{week_days[[0, 2, 4].index(i)]}</div>'
+        else:
+            week_days_html += '<div></div>'
+    week_days_html += '</div>'
+
+    # Виводимо підписи місяців, дні тижня та основну сітку
+    st.markdown(months_html, unsafe_allow_html=True)
+    st.markdown(
+        f'<div style="display: flex;">{week_days_html}<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">{grid_html}</div></div>',
+        unsafe_allow_html=True)
 
     # Виведення сітки із 52 тижнів по 7 днів
     st.markdown(
