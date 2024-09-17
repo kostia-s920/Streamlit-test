@@ -112,6 +112,11 @@ def render_contribution_chart(change_dates):
 
     # Додаємо горизонтальний скрол
     st.markdown('<div class="contribution-box-container">', unsafe_allow_html=True)
+
+    # Додаємо місяці над сіткою
+    st.markdown(render_month_labels(), unsafe_allow_html=True)
+
+    # Додаємо саму сітку змін
     st.markdown(
         f'<div style="display: flex;">{week_days_html}<div class="contribution-box-container-inner">{grid_html}</div></div>',
         unsafe_allow_html=True
@@ -126,7 +131,8 @@ def main():
     conn = connect_to_db()
     if conn:
         # Крок 1: Вибір конкурента
-        competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com'])
+        competitor = st.selectbox("Виберіть конкурента",
+                                  ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com'])
 
         # Додатковий перемикач для вибору режиму перегляду
         view_all = st.checkbox("Показати всі зміни конкурента")
@@ -158,11 +164,13 @@ def main():
 
             if not df.empty:
                 # Відображення заголовка сторінки та візуалізація змін
-                st.markdown(f"<p style='font-size:12px;color:gray;'>Зміни для сторінки: {page}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='font-size:12px;color:gray;'>Зміни для сторінки: {page}</p>",
+                            unsafe_allow_html=True)
                 render_contribution_chart(df)
             else:
                 # Повідомлення про відсутність змін
-                st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
+                            unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
