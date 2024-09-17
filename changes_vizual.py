@@ -1,8 +1,7 @@
 import streamlit as st
+import psycopg2
 import pandas as pd
 from datetime import datetime
-import psycopg2
-
 
 # Підключення до бази даних PostgreSQL
 def connect_to_db():
@@ -19,8 +18,8 @@ def connect_to_db():
         return None
 
 
-# Оновлюємо функцію рендерингу сітки змін за місяцями
-def render_contribution_chart_by_months(change_dates):
+# Функція для рендерингу сітки змін за місяцями
+def render_contribution_chart_by_months(change_dates, selected_year):
     st.markdown(
         """
         <style>
@@ -39,8 +38,7 @@ def render_contribution_chart_by_months(change_dates):
             display: flex;
             justify-content: space-around;
             flex-wrap: wrap;
-            gap: 20px;
-            max-width: 100%;  /* Контейнер дозволяє перенесення */
+            max-width: 900px;  /* Обмежуємо ширину */
         }
         .month-column {
             display: grid;
@@ -56,42 +54,32 @@ def render_contribution_chart_by_months(change_dates):
             font-weight: bold;
             font-size: 12px;
         }
-        /* Додаємо стиль для обмеження 5 місяців у рядку */
-        .contribution-box-container {
-            display: flex;
-            flex-wrap: wrap;
-            max-width: 660px;  /* Ширина для 5 місяців */
-        }
         </style>
         """,
         unsafe_allow_html=True
     )
 
-    # Перетворюємо дати змін у змінній change_dates на формат datetime.date
+    # Фільтруємо дати за обраним роком
     change_dates['change_date'] = pd.to_datetime(change_dates['change_date']).dt.date
+    change_dates = change_dates[change_dates['change_date'].apply(lambda x: x.year) == selected_year]
     changes_by_date = change_dates.groupby('change_date').size()  # Групуємо зміни за датою
 
-    # Оновлюємо функцію рендерингу сітки змін для кожного місяця з правильним відображенням
     def render_month_labels():
         months = {
             'Jan': 31, 'Feb': 28, 'Mar': 31, 'Apr': 30, 'May': 31, 'Jun': 30,
             'Jul': 31, 'Aug': 31, 'Sep': 30, 'Oct': 31, 'Nov': 30, 'Dec': 31
         }
 
-        # HTML для відображення місяців горизонтально
-        months_html = '<div class="contribution-box-container">'
+        months_html = '<div style="display: flex; flex-wrap: wrap; gap: 20px;">'
 
         for month, days in months.items():
-            # HTML для одного місяця
             month_html = f'<div style="text-align: center;"><div style="margin-bottom: 5px;">{month}</div>'
-            # Додаємо дні місяця в сітку (по 7 днів на рядок)
             month_html += f'<div style="display: grid; grid-template-columns: repeat(7, 14px); grid-gap: 2px;">'
 
             for day in range(1, days + 1):
-                date = datetime(datetime.now().year, list(months.keys()).index(month) + 1, day).date()
+                date = datetime(selected_year, list(months.keys()).index(month) + 1, day).date()
                 count = changes_by_date.get(date, 0)
 
-                # Вибираємо клас для кольору квадратика в залежності від кількості змін
                 if count == 0:
                     level = 'contribution-box'
                 elif count <= 1:
@@ -106,7 +94,6 @@ def render_contribution_chart_by_months(change_dates):
                 month_html += f'<div class="{level}" title="{date} - {count} changes"></div>'
 
             month_html += '</div>'
-            # Додаємо місяць в основний блок
             months_html += f'{month_html}</div>'
 
         months_html += '</div>'
@@ -116,50 +103,55 @@ def render_contribution_chart_by_months(change_dates):
     st.markdown(render_month_labels(), unsafe_allow_html=True)
 
 
-# Основна функція
+# Основна функція для відображення даних у Streamlit
 def main():
-    st.title('Візуалізація змін контенту за місяцями')
-
-    # Підключення до бази даних або використання заглушки
+    # Підключаємося до бази даних
     conn = connect_to_db()
+
     if conn:
-        competitor = st.selectbox("Виберіть конкурента",
-                                  ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com'])
+        st.title("Аналіз Конкурентів")
 
-        # Перевіряємо, чи обрано всі зміни конкурента
-        view_all = st.checkbox("Показати всі зміни конкурента")
+        # Додаємо selectbox для вибору року
+        selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
 
-        if view_all:
-            query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}'"
-            df = pd.read_sql(query, conn)
+        # Візуалізація змін контенту
+        with st.expander("Візуалізація змін контенту", expanded=False):
+            st.subheader('Візуалізація змін контенту для конкурентів')
+            competitor = st.selectbox("Виберіть конкурента",
+                                      ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com'],
+                                      key="content_competitor_selectbox")
 
-            if not df.empty:
-                st.subheader(f"Загальні зміни для {competitor}")
-                render_contribution_chart_by_months(df)
+            view_all = st.checkbox("Показати всі зміни конкурента", key="content_view_all_checkbox")
+
+            if view_all:
+                query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+                df = pd.read_sql(query, conn)
+
+                if not df.empty:
+                    st.subheader(f"Загальні зміни для {competitor} у {selected_year} році")
+                    render_contribution_chart_by_months(df, selected_year)
+                else:
+                    st.write("Немає змін для цього конкурента.")
             else:
-                st.write("Немає змін для цього конкурента.")
-        else:
-            # Якщо перегляд змін для окремих сторінок
-            page_query = f"SELECT DISTINCT url FROM content_changes WHERE competitor_name = '{competitor}'"
-            pages = pd.read_sql(page_query, conn)['url'].tolist()
+                page_query = f"SELECT DISTINCT url FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+                pages = pd.read_sql(page_query, conn)['url'].tolist()
 
-            if not pages:
-                st.write("Немає доступних сторінок для цього конкурента.")
-                return
+                if not pages:
+                    st.write("Немає доступних сторінок для цього конкурента.")
+                    return
 
-            page = st.selectbox("Виберіть сторінку", pages)
+                page = st.selectbox("Виберіть сторінку", pages, key="content_page_selectbox")
 
-            # Отримання даних змін для вибраної сторінки
-            query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}' AND url = '{page}'"
-            df = pd.read_sql(query, conn)
+                query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}' AND url = '{page}'"
+                df = pd.read_sql(query, conn)
 
-            if not df.empty:
-                st.markdown(f"<p style='font-size:12px;color:gray;'>Зміни для сторінки: {page}</p>",
-                            unsafe_allow_html=True)
-                render_contribution_chart_by_months(df)
-            else:
-                st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
-                            unsafe_allow_html=True)
+                if not df.empty:
+                    st.markdown(f"<p style='font-size:12px;color:gray;'>Зміни для сторінки: {page} у {selected_year} році</p>",
+                                unsafe_allow_html=True)
+                    render_contribution_chart_by_months(df, selected_year)
+                else:
+                    st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
+                                unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
