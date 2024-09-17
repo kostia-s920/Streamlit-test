@@ -348,23 +348,25 @@ def main():
         st.write("")
 
         # Додаємо можливість порівняння конкурентів
-        st.subheader('Comparison of Keywords Between Competitors')
+        with st.expander("Click to expand/collapse page content", expanded=False):
+            st.subheader('Comparison of Keywords Between Competitors')
+            # Додатковий код для порівняння конкурентів повинен бути з відступом
+            selected_competitors = st.multiselect("Select Competitors for Comparison", competitors,
+                                                  default=competitors[:2], key="competitors_multiselect")
 
-        # Вибір кількох конкурентів
-        selected_competitors = st.multiselect("Select Competitors for Comparison", competitors, default=competitors[:2], key="competitors_multiselect")
+            # Отримуємо дані для кожного конкурента
+            df_list = [get_keyword_data(conn, competitor) for competitor in selected_competitors]
 
-        # Отримуємо дані для кожного конкурента
-        df_list = [get_keyword_data(conn, competitor) for competitor in selected_competitors]
+            # Вибір URL для кожного конкурента
+            selected_urls_for_comparison = []
+            for competitor, df in zip(selected_competitors, df_list):
+                selected_url = st.selectbox(f'Select URL for {competitor}', df['url'].unique(),
+                                            key=f"url_select_{competitor}")
+                selected_urls_for_comparison.append(selected_url)
 
-        # Вибір URL для кожного конкурента
-        selected_urls_for_comparison = []
-        for competitor, df in zip(selected_competitors, df_list):
-            selected_url = st.selectbox(f'Select URL for {competitor}', df['url'].unique(), key=f"url_select_{competitor}")
-            selected_urls_for_comparison.append(selected_url)
-
-        # Побудова графіка порівняння
-        if len(selected_urls_for_comparison) == len(selected_competitors):
-            plot_comparison(df_list, selected_competitors, selected_urls_for_comparison)
+            # Побудова графіка порівняння
+            if len(selected_urls_for_comparison) == len(selected_competitors):
+                plot_comparison(df_list, selected_competitors, selected_urls_for_comparison)
 
         st.write("")
         st.markdown("<div style='background-color: lightgray; height: 2px;'></div>", unsafe_allow_html=True)
