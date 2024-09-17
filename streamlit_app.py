@@ -258,7 +258,9 @@ def main():
             st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
                         unsafe_allow_html=True)
 
+    st.write("")
     st.markdown("<div style='background-color: lightgray; height: 2px;'></div>", unsafe_allow_html=True)
+    st.write("")
 
     # Keyword Count and Historical Analysis for Competitors
     st.title('Keyword Count and Historical Analysis for Competitors')
@@ -341,7 +343,9 @@ def main():
             else:
                 st.write(f"No keywords found for URL: {selected_url_for_keywords}")
 
+        st.write("")
         st.markdown("<div style='background-color: lightgray; height: 2px;'></div>", unsafe_allow_html=True)
+        st.write("")
 
         # Додаємо можливість порівняння конкурентів
         st.subheader('Comparison of Keywords Between Competitors')
@@ -362,7 +366,9 @@ def main():
         if len(selected_urls_for_comparison) == len(selected_competitors):
             plot_comparison(df_list, selected_competitors, selected_urls_for_comparison)
 
+        st.write("")
         st.markdown("<div style='background-color: lightgray; height: 2px;'></div>", unsafe_allow_html=True)
+        st.write("")
 
         # Додаємо блок для відображення контенту сторінки
         with st.expander("Click to expand/collapse page content", expanded=False):
