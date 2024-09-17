@@ -21,7 +21,6 @@ def connect_to_db():
 
 # Додаємо місяці над сіткою
 def render_month_labels():
-    # Місяці та кількість тижнів, які вони покривають
     months = {
         'Jan': 4, 'Feb': 4, 'Mar': 5, 'Apr': 4, 'May': 4, 'Jun': 4,
         'Jul': 5, 'Aug': 4, 'Sep': 4, 'Oct': 5, 'Nov': 4, 'Dec': 5
@@ -29,9 +28,7 @@ def render_month_labels():
 
     months_html = '<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">'
 
-    # Проходимо по кожному місяцю і додаємо відповідні блоки
     for month, span in months.items():
-        # Кожен місяць отримує свій grid column span відповідно до кількості тижнів
         months_html += f'<div style="grid-column: span {span}; text-align: center;">{month}</div>'
 
     months_html += '</div>'
@@ -46,22 +43,17 @@ def render_contribution_chart(change_dates):
         unsafe_allow_html=True
     )
 
-    # Підрахунок кількості змін за день
     change_dates['change_date'] = pd.to_datetime(change_dates['change_date']).dt.date
     changes_by_date = change_dates.groupby('change_date').size()
 
-    # Визначаємо початок і кінець року
     start_of_year = pd.to_datetime(f'{datetime.now().year}-01-01').date()
     end_of_year = pd.to_datetime(f'{datetime.now().year}-12-31').date()
 
-    # Створюємо сітку із 52 тижнів та 7 днів на кожен тиждень
     total_days = (end_of_year - start_of_year).days + 1
     days = [start_of_year + timedelta(days=i) for i in range(total_days)]
 
-    # Підписи для осі Y (понеділок, середа, п'ятниця)
     week_days = ['Mon', 'Wed', 'Fri']
 
-    # Генеруємо порожні квадратики зі змінами
     chart = []
     for day in days:
         count = changes_by_date.get(day, 0)
@@ -77,7 +69,6 @@ def render_contribution_chart(change_dates):
             level = 'contribution-box contribution-level-4'
         chart.append(f'<div class="{level}" title="{day} - {count} changes"></div>')
 
-    # Розбиваємо квадратики на 52 тижні по 7 днів
     grid_html = ''
     for week in range(52):
         week_html = '<div style="display: grid; grid-template-rows: repeat(7, 14px); grid-gap: 2px;">'
@@ -88,16 +79,14 @@ def render_contribution_chart(change_dates):
         week_html += '</div>'
         grid_html += week_html
 
-    # Додаємо дні тижня зліва від сітки
     week_days_html = '<div style="display: grid; grid-template-rows: repeat(7, 14px); grid-gap: 2px;">'
     for i in range(7):
-        if i in [0, 2, 4]:  # Понеділок, середа, п'ятниця
+        if i in [0, 2, 4]:
             week_days_html += f'<div>{week_days[[0, 2, 4].index(i)]}</div>'
         else:
             week_days_html += '<div></div>'
     week_days_html += '</div>'
 
-    # Виводимо підписи місяців, дні тижня та основну сітку
     st.markdown(render_month_labels(), unsafe_allow_html=True)
     st.markdown(
         f'<div style="display: flex;">{week_days_html}<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">{grid_html}</div></div>',
@@ -110,16 +99,29 @@ def main():
 
     conn = connect_to_db()
     if conn:
-        competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com'])
+        # Крок 1: Вибір конкурента
+        competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'talentlms_com'])
 
-        # Запит даних змін для конкурента
-        query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}'"
-        df = pd.read_sql(query, conn)
+        # Крок 2: Отримання списку сторінок для обраного конкурента
+        page_query = f"SELECT DISTINCT page_url FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+        pages_df = pd.read_sql(page_query, conn)
 
-        if not df.empty:
-            render_contribution_chart(df)
+        if not pages_df.empty:
+            # Вибір сторінки для обраного конкурента
+            page = st.selectbox("Виберіть сторінку конкурента", pages_df['page_url'].tolist())
+
+            # Крок 3: Запит даних змін для конкретної сторінки конкурента
+            query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}' AND page_url = '{page}'"
+            df = pd.read_sql(query, conn)
+
+            if not df.empty:
+                render_contribution_chart(df)
+            else:
+                st.write("Немає змін для цієї сторінки.")
         else:
-            st.write("Немає змін для цього конкурента")
+            st.write("Немає доступних сторінок для цього конкурента.")
+    else:
+        st.error("Не вдалося підключитися до бази даних.")
 
 
 if __name__ == "__main__":
