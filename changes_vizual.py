@@ -32,8 +32,8 @@ def render_contribution_chart_by_months(change_dates):
         """
         <style>
         .contribution-box {
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             margin: 2px;
             display: inline-block;
             background-color: #ebedf0;
@@ -44,13 +44,14 @@ def render_contribution_chart_by_months(change_dates):
         .contribution-level-4 { background-color: #196127; }
         .contribution-box-container {
             display: flex;
-            justify-content: space-around;
+            justify-content: flex-start;
+            gap: 20px;
+            overflow-x: auto;
         }
         .month-column {
             display: grid;
-            grid-template-rows: repeat(31, 12px); /* Максимум 31 день */
-            gap: 4px;
-            margin-right: 20px;
+            grid-template-columns: repeat(7, 1fr); /* Максимум 7 днів у рядку */
+            grid-gap: 4px;
             text-align: center;
         }
         .month-title {
@@ -76,6 +77,7 @@ def render_contribution_chart_by_months(change_dates):
     for month, days in months_data:
         month_html = f'<div class="month-column"><div class="month-title">{month}</div>'
 
+        # Рендеримо квадратики по тижнях (7 днів у рядку)
         for day in range(1, days + 1):
             date = datetime(datetime.now().year, months_data.index((month, days)) + 1, day).date()
             count = changes_by_date.get(date, 0)
