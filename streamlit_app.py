@@ -4,7 +4,7 @@ import psycopg2
 import pandas as pd
 import re
 import matplotlib.dates as mdates
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
@@ -134,31 +134,14 @@ def highlight_keywords(text, keywords):
     return text
 
 
-# Додаємо місяці над сіткою
-def render_month_labels():
-    months = {
-        'Jan': 4, 'Feb': 4, 'Mar': 5, 'Apr': 4, 'May': 4, 'Jun': 4,
-        'Jul': 5, 'Aug': 4, 'Sep': 4, 'Oct': 5, 'Nov': 4, 'Dec': 5
-    }
-
-    months_html = '<div style="display: grid; grid-template-columns: repeat(52, 10px); grid-gap: 2px;">'
-
-    for month, span in months.items():
-        months_html += f'<div style="grid-column: span {span}; text-align: center;">{month}</div>'
-
-    months_html += '</div>'
-
-    return months_html
-
-
-# Основний блок для рендерингу візуалізації
-def render_contribution_chart(change_dates):
+# Оновлюємо функцію рендерингу сітки змін за місяцями
+def render_contribution_chart_by_months(change_dates):
     st.markdown(
         """
         <style>
         .contribution-box {
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             margin: 2px;
             display: inline-block;
             background-color: #ebedf0;
@@ -168,75 +151,85 @@ def render_contribution_chart(change_dates):
         .contribution-level-3 { background-color: #239a3b; }
         .contribution-level-4 { background-color: #196127; }
         .contribution-box-container {
-            overflow-x: auto;
-            max-width: 100%;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 100%;  /* Контейнер дозволяє перенесення */
         }
-        .contribution-box-container-inner {
+        .month-column {
             display: grid;
-            grid-template-columns: repeat(52, 10px);
-            grid-gap: 2px;
+            grid-template-rows: repeat(7, 14px);  /* 7 днів на рядок */
+            grid-auto-flow: column;  /* Заповнення по колонках */
+            gap: 4px;
+            margin-right: 20px;
+            text-align: center;
+        }
+        .month-title {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        /* Додаємо стиль для обмеження 5 місяців у рядку */
+        .contribution-box-container {
+            display: flex;
+            flex-wrap: wrap;
+            max-width: 660px;  /* Ширина для 5 місяців */
         }
         </style>
         """,
         unsafe_allow_html=True
     )
 
+    # Перетворюємо дати змін у змінній change_dates на формат datetime.date
     change_dates['change_date'] = pd.to_datetime(change_dates['change_date']).dt.date
-    changes_by_date = change_dates.groupby('change_date').size()
+    changes_by_date = change_dates.groupby('change_date').size()  # Групуємо зміни за датою
 
-    start_of_year = pd.to_datetime(f'{datetime.now().year}-01-01').date()
-    end_of_year = pd.to_datetime(f'{datetime.now().year}-12-31').date()
+    # Оновлюємо функцію рендерингу сітки змін для кожного місяця з правильним відображенням
+    def render_month_labels():
+        months = {
+            'Jan': 31, 'Feb': 28, 'Mar': 31, 'Apr': 30, 'May': 31, 'Jun': 30,
+            'Jul': 31, 'Aug': 31, 'Sep': 30, 'Oct': 31, 'Nov': 30, 'Dec': 31
+        }
 
-    total_days = (end_of_year - start_of_year).days + 1
-    days = [start_of_year + timedelta(days=i) for i in range(total_days)]
+        # HTML для відображення місяців горизонтально
+        months_html = '<div class="contribution-box-container">'
 
-    week_days = ['Mon', 'Wed', 'Fri']
+        for month, days in months.items():
+            # HTML для одного місяця
+            month_html = f'<div style="text-align: center;"><div style="margin-bottom: 5px;">{month}</div>'
+            # Додаємо дні місяця в сітку (по 7 днів на рядок)
+            month_html += f'<div style="display: grid; grid-template-columns: repeat(7, 14px); grid-gap: 2px;">'
 
-    chart = []
-    for day in days:
-        count = changes_by_date.get(day, 0)
-        if count == 0:
-            level = 'contribution-box'
-        elif count <= 1:
-            level = 'contribution-box contribution-level-1'
-        elif count <= 3:
-            level = 'contribution-box contribution-level-2'
-        elif count <= 5:
-            level = 'contribution-box contribution-level-3'
-        else:
-            level = 'contribution-box contribution-level-4'
-        chart.append(f'<div class="{level}" title="{day} - {count} changes"></div>')
+            for day in range(1, days + 1):
+                date = datetime(datetime.now().year, list(months.keys()).index(month) + 1, day).date()
+                count = changes_by_date.get(date, 0)
 
-    grid_html = ''
-    for week in range(52):
-        week_html = '<div style="display: grid; grid-template-rows: repeat(7, 10px); grid-gap: 2px;">'
-        for day_index in range(7):
-            index = week * 7 + day_index
-            if index < len(chart):
-                week_html += chart[index]
-        week_html += '</div>'
-        grid_html += week_html
+                # Вибираємо клас для кольору квадратика в залежності від кількості змін
+                if count == 0:
+                    level = 'contribution-box'
+                elif count <= 1:
+                    level = 'contribution-box contribution-level-1'
+                elif count <= 3:
+                    level = 'contribution-box contribution-level-2'
+                elif count <= 5:
+                    level = 'contribution-box contribution-level-3'
+                else:
+                    level = 'contribution-box contribution-level-4'
 
-    week_days_html = '<div style="display: grid; grid-template-rows: repeat(7, 10px); grid-gap: 2px;">'
-    for i in range(7):
-        if i in [0, 2, 4]:
-            week_days_html += f'<div>{week_days[[0, 2, 4].index(i)]}</div>'
-        else:
-            week_days_html += '<div></div>'
-    week_days_html += '</div>'
+                month_html += f'<div class="{level}" title="{date} - {count} changes"></div>'
 
-    # Додаємо горизонтальний скрол
-    st.markdown('<div class="contribution-box-container">', unsafe_allow_html=True)
+            month_html += '</div>'
+            # Додаємо місяць в основний блок
+            months_html += f'{month_html}</div>'
 
-    # Додаємо візуалізацію місяців
+        months_html += '</div>'
+        return months_html
+
+    # Викликаємо рендеринг місяців
     st.markdown(render_month_labels(), unsafe_allow_html=True)
 
-    # Додаємо саму сітку змін
-    st.markdown(
-        f'<div style="display: flex;">{week_days_html}<div class="contribution-box-container-inner">{grid_html}</div></div>',
-        unsafe_allow_html=True
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # Основна функція для відображення даних у Streamlit
@@ -262,7 +255,7 @@ def main():
 
                 if not df.empty:
                     st.subheader(f"Загальні зміни для {competitor}")
-                    render_contribution_chart(df)
+                    render_contribution_chart_by_months(df)
                 else:
                     st.write("Немає змін для цього конкурента.")
             else:
@@ -281,7 +274,7 @@ def main():
                 if not df.empty:
                     st.markdown(f"<p style='font-size:12px;color:gray;'>Зміни для сторінки: {page}</p>",
                                 unsafe_allow_html=True)
-                    render_contribution_chart(df)
+                    render_contribution_chart_by_months(df)
                 else:
                     st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
                                 unsafe_allow_html=True)
