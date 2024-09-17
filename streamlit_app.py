@@ -214,7 +214,7 @@ def main():
     conn = connect_to_db()
 
     if conn:
-        st.title("Аналіз ключових слів конкурентів")
+        st.title("Аналіз Конкурентів")
 
         # Візуалізація змін контенту
         with st.expander("Візуалізація змін контенту", expanded=False):
