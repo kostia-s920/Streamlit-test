@@ -120,14 +120,14 @@ def main():
 
             view_all = st.checkbox("Показати всі зміни конкурента", key="content_view_all_checkbox")
 
-            # Додаємо selectbox для вибору року
-            selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
-
             if view_all:
                 query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}'"
                 df = pd.read_sql(query, conn)
 
                 if not df.empty:
+                    # Додаємо selectbox для вибору року після вибору сторінки
+                    selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
+
                     st.subheader(f"Загальні зміни для {competitor} у {selected_year} році")
                     render_contribution_chart_by_months(df, selected_year)
                 else:
@@ -146,6 +146,9 @@ def main():
                 df = pd.read_sql(query, conn)
 
                 if not df.empty:
+                    # Додаємо selectbox для вибору року після вибору сторінки
+                    selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
+
                     st.markdown(f"<p style='font-size:12px;color:gray;'>Зміни для сторінки: {page} у {selected_year} році</p>",
                                 unsafe_allow_html=True)
                     render_contribution_chart_by_months(df, selected_year)
