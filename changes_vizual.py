@@ -44,7 +44,7 @@ def render_contribution_chart(change_dates):
     # Підписи для осі Y (понеділок, середа, п'ятниця)
     week_days = ['Mon', 'Wed', 'Fri']
 
-    # Заповнюємо квадратики змінами або залишаємо пустими
+    # Генеруємо порожні квадратики зі змінами
     chart = []
     for day in days:
         count = changes_by_date.get(day, 0)
@@ -71,7 +71,7 @@ def render_contribution_chart(change_dates):
         week_html += '</div>'
         grid_html += week_html
 
-        # Додаємо місяці над сіткою
+    # Додаємо місяці над сіткою
     months_html = '<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">'
     month_pos = [4, 8, 13, 17, 22, 26, 31, 35, 40, 44, 48, 52]
     for i in range(52):
@@ -94,11 +94,6 @@ def render_contribution_chart(change_dates):
     st.markdown(months_html, unsafe_allow_html=True)
     st.markdown(
         f'<div style="display: flex;">{week_days_html}<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">{grid_html}</div></div>',
-        unsafe_allow_html=True)
-
-    # Виведення сітки із 52 тижнів по 7 днів
-    st.markdown(
-        f'<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">{grid_html}</div>',
         unsafe_allow_html=True)
 
 
