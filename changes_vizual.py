@@ -102,26 +102,39 @@ def main():
         # Крок 1: Вибір конкурента
         competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'talentlms_com'])
 
-        # Крок 2: Отримання списку сторінок для обраного конкурента
-        page_query = f"SELECT DISTINCT url FROM content_changes_temp WHERE competitor_name = '{competitor}'"
-        pages_df = pd.read_sql(page_query, conn)
+        # Додатковий перемикач для вибору режиму перегляду
+        view_all = st.checkbox("Показати всі зміни конкурента")
 
-        if not pages_df.empty:
-            # Вибір сторінки для обраного конкурента
-            page = st.selectbox("Виберіть сторінку конкурента", pages_df['url'].tolist())
+        if view_all:
+            # Якщо обрано перегляд всіх змін, виконуємо запит для всіх змін конкурента
+            query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+            df = pd.read_sql(query, conn)
 
-            # Крок 3: Запит даних змін для конкретної сторінки конкурента
+            if not df.empty:
+                st.subheader(f"Загальні зміни для {competitor}")
+                render_contribution_chart(df)
+            else:
+                st.write("Немає змін для цього конкурента.")
+        else:
+            # Якщо перегляд змін для окремих сторінок
+            page_query = f"SELECT DISTINCT url FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+            pages = pd.read_sql(page_query, conn)['url'].tolist()
+
+            if not pages:
+                st.write("Немає доступних сторінок для цього конкурента.")
+                return
+
+            page = st.selectbox("Виберіть сторінку", pages)
+
+            # Отримання даних змін для вибраної сторінки
             query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}' AND url = '{page}'"
             df = pd.read_sql(query, conn)
 
             if not df.empty:
+                st.subheader(f"Зміни для сторінки: {page}")
                 render_contribution_chart(df)
             else:
                 st.write("Немає змін для цієї сторінки.")
-        else:
-            st.write("Немає доступних сторінок для цього конкурента.")
-    else:
-        st.error("Не вдалося підключитися до бази даних.")
 
 
 if __name__ == "__main__":
