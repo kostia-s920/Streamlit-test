@@ -39,6 +39,8 @@ def render_contribution_chart_by_months(change_dates):
             display: flex;
             justify-content: space-around;
             flex-wrap: wrap;
+            gap: 20px;
+            max-width: 100%;  /* Контейнер дозволяє перенесення */
         }
         .month-column {
             display: grid;
@@ -53,6 +55,12 @@ def render_contribution_chart_by_months(change_dates):
             margin-bottom: 10px;
             font-weight: bold;
             font-size: 12px;
+        }
+        /* Додаємо стиль для обмеження 5 місяців у рядку */
+        .contribution-box-container {
+            display: flex;
+            flex-wrap: wrap;
+            max-width: 660px;  /* Ширина для 5 місяців */
         }
         </style>
         """,
@@ -71,7 +79,7 @@ def render_contribution_chart_by_months(change_dates):
         }
 
         # HTML для відображення місяців горизонтально
-        months_html = '<div style="display: flex; flex-wrap: nowrap; gap: 20px;">'
+        months_html = '<div class="contribution-box-container">'
 
         for month, days in months.items():
             # HTML для одного місяця
