@@ -209,7 +209,6 @@ def render_contribution_chart(change_dates):
 
 # Основна функція для відображення даних у Streamlit
 def main():
-    st.title('Keyword Count and Historical Analysis for Competitors')
 
     # Підключаємося до бази даних
     conn = connect_to_db()
@@ -259,6 +258,10 @@ def main():
             st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
                         unsafe_allow_html=True)
 
+    st.markdown("<div style='background-color: lightgray; height: 2px;'></div>", unsafe_allow_html=True)
+
+    # Keyword Count and Historical Analysis for Competitors
+    st.title('Keyword Count and Historical Analysis for Competitors')
     if conn:
         competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com']
 
@@ -338,6 +341,8 @@ def main():
             else:
                 st.write(f"No keywords found for URL: {selected_url_for_keywords}")
 
+        st.markdown("<div style='background-color: lightgray; height: 2px;'></div>", unsafe_allow_html=True)
+
         # Додаємо можливість порівняння конкурентів
         st.subheader('Comparison of Keywords Between Competitors')
 
@@ -356,6 +361,8 @@ def main():
         # Побудова графіка порівняння
         if len(selected_urls_for_comparison) == len(selected_competitors):
             plot_comparison(df_list, selected_competitors, selected_urls_for_comparison)
+
+        st.markdown("<div style='background-color: lightgray; height: 2px;'></div>", unsafe_allow_html=True)
 
         # Додаємо блок для відображення контенту сторінки
         with st.expander("Click to expand/collapse page content", expanded=False):
