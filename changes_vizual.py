@@ -59,46 +59,53 @@ def render_contribution_chart_by_months(change_dates):
         unsafe_allow_html=True
     )
 
+    # Перетворюємо дати змін у змінній change_dates на формат datetime.date
     change_dates['change_date'] = pd.to_datetime(change_dates['change_date']).dt.date
     changes_by_date = change_dates.groupby('change_date').size()  # Групуємо зміни за датою
 
-    # Використовуємо зміни за датою
-    months = {
-        'Jan': 31, 'Feb': 28, 'Mar': 31, 'Apr': 30, 'May': 31, 'Jun': 30,
-        'Jul': 31, 'Aug': 31, 'Sep': 30, 'Oct': 31, 'Nov': 30, 'Dec': 31
-    }
+    # Оновлюємо функцію рендерингу сітки змін для кожного місяця з правильним відображенням
+    def render_month_labels():
+        months = {
+            'Jan': 31, 'Feb': 28, 'Mar': 31, 'Apr': 30, 'May': 31, 'Jun': 30,
+            'Jul': 31, 'Aug': 31, 'Sep': 30, 'Oct': 31, 'Nov': 30, 'Dec': 31
+        }
 
-    st.markdown('<div class="contribution-box-container">', unsafe_allow_html=True)
+        # HTML для відображення місяців горизонтально
+        months_html = '<div style="display: flex; flex-wrap: nowrap; gap: 20px;">'
 
-    for month, days in months.items():
-        # Генерація днів для кожного місяця
-        month_html = f'<div><div class="month-title">{month}</div><div class="month-column">'
+        for month, days in months.items():
+            # HTML для одного місяця
+            month_html = f'<div style="text-align: center;"><div style="margin-bottom: 5px;">{month}</div>'
+            # Додаємо дні місяця в сітку (по 7 днів на рядок)
+            month_html += f'<div style="display: grid; grid-template-columns: repeat(7, 14px); grid-gap: 2px;">'
 
-        for day in range(1, days + 1):
-            # Формуємо дату для кожного дня місяця
-            date = datetime(datetime.now().year, list(months.keys()).index(month) + 1, day).date()
-            count = changes_by_date.get(date, 0)
+            for day in range(1, days + 1):
+                date = datetime(datetime.now().year, list(months.keys()).index(month) + 1, day).date()
+                count = changes_by_date.get(date, 0)
 
-            # Вибираємо рівень кольору для кількості змін
-            if count == 0:
-                level = 'contribution-box'
-            elif count <= 1:
-                level = 'contribution-box contribution-level-1'
-            elif count <= 3:
-                level = 'contribution-box contribution-level-2'
-            elif count <= 5:
-                level = 'contribution-box contribution-level-3'
-            else:
-                level = 'contribution-box contribution-level-4'
+                # Вибираємо клас для кольору квадратика в залежності від кількості змін
+                if count == 0:
+                    level = 'contribution-box'
+                elif count <= 1:
+                    level = 'contribution-box contribution-level-1'
+                elif count <= 3:
+                    level = 'contribution-box contribution-level-2'
+                elif count <= 5:
+                    level = 'contribution-box contribution-level-3'
+                else:
+                    level = 'contribution-box contribution-level-4'
 
-            # Додаємо квадратик для кожного дня
-            month_html += f'<div class="{level}" title="{date} - {count} changes"></div>'
+                month_html += f'<div class="{level}" title="{date} - {count} changes"></div>'
 
-        month_html += '</div></div>'
+            month_html += '</div>'
+            # Додаємо місяць в основний блок
+            months_html += f'{month_html}</div>'
 
-        st.markdown(month_html, unsafe_allow_html=True)
+        months_html += '</div>'
+        return months_html
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Викликаємо рендеринг місяців
+    st.markdown(render_month_labels(), unsafe_allow_html=True)
 
 
 # Основна функція
@@ -108,7 +115,8 @@ def main():
     # Підключення до бази даних або використання заглушки
     conn = connect_to_db()
     if conn:
-        competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com'])
+        competitor = st.selectbox("Виберіть конкурента",
+                                  ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com'])
 
         # Перевіряємо, чи обрано всі зміни конкурента
         view_all = st.checkbox("Показати всі зміни конкурента")
