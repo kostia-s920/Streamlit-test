@@ -54,7 +54,6 @@ def render_contribution_chart(change_dates):
         .contribution-level-4 { background-color: #196127; }
         .contribution-box-container {
             overflow-x: auto;
-            max-width: 100%;
             white-space: nowrap;
         }
         .contribution-box-container-inner {
@@ -70,6 +69,12 @@ def render_contribution_chart(change_dates):
             .contribution-box-container-inner {
                 grid-template-columns: repeat(52, 8px);
             }
+        }
+        .month-labels {
+            display: grid;
+            grid-template-columns: repeat(52, 10px);
+            grid-gap: 2px;
+            margin-bottom: 4px;
         }
         </style>
         """,
