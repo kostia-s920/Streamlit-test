@@ -110,10 +110,10 @@ def main():
 
     conn = connect_to_db()
     if conn:
-        competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'talentlms_com'])
+        competitor = st.selectbox("Виберіть конкурента", ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com'])
 
         # Запит даних змін для конкурента
-        query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+        query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}'"
         df = pd.read_sql(query, conn)
 
         if not df.empty:
