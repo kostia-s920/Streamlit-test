@@ -19,6 +19,26 @@ def connect_to_db():
         return None
 
 
+# Додаємо місяці над сіткою
+def render_month_labels():
+    # Місяці та кількість тижнів, які вони покривають
+    months = {
+        'Jan': 4, 'Feb': 4, 'Mar': 5, 'Apr': 4, 'May': 4, 'Jun': 4,
+        'Jul': 5, 'Aug': 4, 'Sep': 4, 'Oct': 5, 'Nov': 4, 'Dec': 5
+    }
+
+    months_html = '<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">'
+
+    # Проходимо по кожному місяцю і додаємо відповідні блоки
+    for month, span in months.items():
+        # Кожен місяць отримує свій grid column span відповідно до кількості тижнів
+        months_html += f'<div style="grid-column: span {span}; text-align: center;">{month}</div>'
+
+    months_html += '</div>'
+
+    return months_html
+
+
 # Основний блок для рендерингу візуалізації
 def render_contribution_chart(change_dates):
     st.markdown(
@@ -37,9 +57,6 @@ def render_contribution_chart(change_dates):
     # Створюємо сітку із 52 тижнів та 7 днів на кожен тиждень
     total_days = (end_of_year - start_of_year).days + 1
     days = [start_of_year + timedelta(days=i) for i in range(total_days)]
-
-    # Місяці для відображення на осі X
-    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
     # Підписи для осі Y (понеділок, середа, п'ятниця)
     week_days = ['Mon', 'Wed', 'Fri']
@@ -71,16 +88,6 @@ def render_contribution_chart(change_dates):
         week_html += '</div>'
         grid_html += week_html
 
-    # Додаємо місяці над сіткою
-    months_html = '<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">'
-    month_pos = [4, 8, 13, 17, 22, 26, 31, 35, 40, 44, 48, 52]
-    for i in range(52):
-        if i in month_pos:
-            months_html += f'<div style="text-align: center;">{months[month_pos.index(i)]}</div>'
-        else:
-            months_html += '<div></div>'
-    months_html += '</div>'
-
     # Додаємо дні тижня зліва від сітки
     week_days_html = '<div style="display: grid; grid-template-rows: repeat(7, 14px); grid-gap: 2px;">'
     for i in range(7):
@@ -91,7 +98,7 @@ def render_contribution_chart(change_dates):
     week_days_html += '</div>'
 
     # Виводимо підписи місяців, дні тижня та основну сітку
-    st.markdown(months_html, unsafe_allow_html=True)
+    st.markdown(render_month_labels(), unsafe_allow_html=True)
     st.markdown(
         f'<div style="display: flex;">{week_days_html}<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">{grid_html}</div></div>',
         unsafe_allow_html=True)
