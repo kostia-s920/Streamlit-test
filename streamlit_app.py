@@ -352,7 +352,7 @@ def main():
         st.markdown("<div style='background-color: lightgray; height: 2px;'></div>", unsafe_allow_html=True)
         st.write("")
 
-        # Додаємо можливість порівняння конкурентів
+# Додаємо можливість порівняння конкурентів
         with st.expander("Comparison of Keywords Between Competitors", expanded=False):
             st.title('Comparison of Keywords Between Competitors')
             # Додатковий код для порівняння конкурентів повинен бути з відступом
