@@ -111,9 +111,6 @@ def main():
     if conn:
         st.title("Аналіз Конкурентів")
 
-        # Додаємо selectbox для вибору року
-        selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
-
         # Візуалізація змін контенту
         with st.expander("Візуалізація змін контенту", expanded=False):
             st.subheader('Візуалізація змін контенту для конкурентів')
@@ -122,6 +119,9 @@ def main():
                                       key="content_competitor_selectbox")
 
             view_all = st.checkbox("Показати всі зміни конкурента", key="content_view_all_checkbox")
+
+            # Додаємо selectbox для вибору року
+            selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
 
             if view_all:
                 query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}'"
