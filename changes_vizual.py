@@ -36,7 +36,7 @@ def render_month_labels():
     return months_html
 
 
-# Основний блок для рендерингу візуалізаціїх
+# Основний блок для рендерингу візуалізації
 def render_contribution_chart(change_dates):
     st.markdown(
         """
@@ -55,11 +55,21 @@ def render_contribution_chart(change_dates):
         .contribution-box-container {
             overflow-x: auto;
             max-width: 100%;
+            white-space: nowrap;
         }
         .contribution-box-container-inner {
             display: grid;
             grid-template-columns: repeat(52, 10px);
             grid-gap: 2px;
+        }
+        @media (max-width: 600px) {
+            .contribution-box {
+                width: 8px;
+                height: 8px;
+            }
+            .contribution-box-container-inner {
+                grid-template-columns: repeat(52, 8px);
+            }
         }
         </style>
         """,
@@ -110,13 +120,9 @@ def render_contribution_chart(change_dates):
             week_days_html += '<div></div>'
     week_days_html += '</div>'
 
-    # Додаємо горизонтальний скрол
+    # Додаємо горизонтальний скрол з підтримкою адаптації для мобільних
     st.markdown('<div class="contribution-box-container">', unsafe_allow_html=True)
-
-    # Додаємо місяці над сіткою
     st.markdown(render_month_labels(), unsafe_allow_html=True)
-
-    # Додаємо саму сітку змін
     st.markdown(
         f'<div style="display: flex;">{week_days_html}<div class="contribution-box-container-inner">{grid_html}</div></div>',
         unsafe_allow_html=True
