@@ -36,7 +36,7 @@ def render_month_labels():
     return months_html
 
 
-# Основний блок для рендерингу візуалізації
+# Основний блок для рендерингу візуалізаціїх
 def render_contribution_chart(change_dates):
     st.markdown(
         """
