@@ -95,7 +95,7 @@ def render_contribution_chart(change_dates):
 
 # Основна функція
 def main():
-    st.title('Візуалізація змін контенту як у GitHub')
+    st.title('Візуалізація змін контенту')
 
     conn = connect_to_db()
     if conn:
