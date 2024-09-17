@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import psycopg2
 
 
@@ -30,19 +30,18 @@ def render_contribution_chart(change_dates):
     change_dates['change_date'] = pd.to_datetime(change_dates['change_date']).dt.date
     changes_by_date = change_dates.groupby('change_date').size()
 
-    days_in_year = pd.date_range(start=f'{datetime.now().year}-01-01', end=datetime.now(), freq='D')
+    # Визначаємо початок і кінець року
+    start_of_year = pd.to_datetime(f'{datetime.now().year}-01-01').date()
+    end_of_year = pd.to_datetime(f'{datetime.now().year}-12-31').date()
+
+    # Створюємо сітку із 52 тижнів та 7 днів на кожен тиждень
+    total_days = (end_of_year - start_of_year).days + 1
+    days = [start_of_year + timedelta(days=i) for i in range(total_days)]
+
+    # Заповнюємо квадратики змінами або залишаємо пустими
     chart = []
-
-    # Місяці для відображення
-    months = days_in_year.to_series().dt.strftime('%b').unique()
-
-    # Додавання місяців як підписів
-    st.markdown("<div style='display: flex; justify-content: space-between; width: 750px;'>"
-                + ''.join([f'<span>{month}</span>' for month in months])
-                + "</div>", unsafe_allow_html=True)
-
-    for day in days_in_year:
-        count = changes_by_date.get(day.date(), 0)
+    for day in days:
+        count = changes_by_date.get(day, 0)
         if count == 0:
             level = 'contribution-box'
         elif count <= 1:
@@ -53,11 +52,23 @@ def render_contribution_chart(change_dates):
             level = 'contribution-box contribution-level-3'
         else:
             level = 'contribution-box contribution-level-4'
-        chart.append(f'<div class="{level}" title="{day.date()} - {count} changes"></div>')
+        chart.append(f'<div class="{level}" title="{day} - {count} changes"></div>')
 
-    # Виведення сітки, схожої на GitHub
-    st.markdown('<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">' + ''.join(
-        chart) + '</div>', unsafe_allow_html=True)
+    # Розбиваємо квадратики на 52 тижні по 7 днів
+    grid_html = ''
+    for week in range(52):
+        week_html = '<div style="display: grid; grid-template-rows: repeat(7, 14px); grid-gap: 2px;">'
+        for day_index in range(7):
+            index = week * 7 + day_index
+            if index < len(chart):
+                week_html += chart[index]
+        week_html += '</div>'
+        grid_html += week_html
+
+    # Виведення сітки із 52 тижнів по 7 днів
+    st.markdown(
+        f'<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">{grid_html}</div>',
+        unsafe_allow_html=True)
 
 
 # Основна функція
