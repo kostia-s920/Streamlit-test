@@ -228,10 +228,15 @@ def render_contribution_chart(change_dates):
     # Додаємо горизонтальний скрол
     st.markdown('<div class="contribution-box-container">', unsafe_allow_html=True)
 
+    # Додаємо візуалізацію місяців
     st.markdown(render_month_labels(), unsafe_allow_html=True)
+
+    # Додаємо саму сітку змін
     st.markdown(
-        f'<div style="display: flex;">{week_days_html}<div style="display: grid; grid-template-columns: repeat(52, 14px); grid-gap: 2px;">{grid_html}</div></div>',
-        unsafe_allow_html=True)
+        f'<div style="display: flex;">{week_days_html}<div class="contribution-box-container-inner">{grid_html}</div></div>',
+        unsafe_allow_html=True
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # Основна функція для відображення даних у Streamlit
