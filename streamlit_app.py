@@ -214,49 +214,50 @@ def main():
     conn = connect_to_db()
 
     # Візуалізація змін контенту
-    st.title('Візуалізація змін контенту')
-    # Крок 1: Вибір конкурента
-    competitor = st.selectbox("Виберіть конкурента",
-                              ['docebo_com', 'ispringsolutions_com', 'talentlms_com',
-                               'paradisosolutions_com'])
+    with st.expander("Візуалізація змін контенту", expanded=False):
+        st.title('Візуалізація змін контенту')
+        # Крок 1: Вибір конкурента
+        competitor = st.selectbox("Виберіть конкурента",
+                                  ['docebo_com', 'ispringsolutions_com', 'talentlms_com',
+                                   'paradisosolutions_com'])
 
-    # Додатковий перемикач для вибору режиму перегляду
-    view_all = st.checkbox("Показати всі зміни конкурента")
+        # Додатковий перемикач для вибору режиму перегляду
+        view_all = st.checkbox("Показати всі зміни конкурента")
 
-    if view_all:
-        # Якщо обрано перегляд всіх змін, виконуємо запит для всіх змін конкурента
-        query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}'"
-        df = pd.read_sql(query, conn)
+        if view_all:
+            # Якщо обрано перегляд всіх змін, виконуємо запит для всіх змін конкурента
+            query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+            df = pd.read_sql(query, conn)
 
-        if not df.empty:
-            st.subheader(f"Загальні зміни для {competitor}")
-            render_contribution_chart(df)
+            if not df.empty:
+                st.subheader(f"Загальні зміни для {competitor}")
+                render_contribution_chart(df)
+            else:
+                st.write("Немає змін для цього конкурента.")
         else:
-            st.write("Немає змін для цього конкурента.")
-    else:
-        # Якщо перегляд змін для окремих сторінок
-        page_query = f"SELECT DISTINCT url FROM content_changes_temp WHERE competitor_name = '{competitor}'"
-        pages = pd.read_sql(page_query, conn)['url'].tolist()
+            # Якщо перегляд змін для окремих сторінок
+            page_query = f"SELECT DISTINCT url FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+            pages = pd.read_sql(page_query, conn)['url'].tolist()
 
-        if not pages:
-            st.write("Немає доступних сторінок для цього конкурента.")
-            return
+            if not pages:
+                st.write("Немає доступних сторінок для цього конкурента.")
+                return
 
-        page = st.selectbox("Виберіть сторінку", pages)
+            page = st.selectbox("Виберіть сторінку", pages)
 
-        # Отримання даних змін для вибраної сторінки
-        query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}' AND url = '{page}'"
-        df = pd.read_sql(query, conn)
+            # Отримання даних змін для вибраної сторінки
+            query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}' AND url = '{page}'"
+            df = pd.read_sql(query, conn)
 
-        if not df.empty:
-            # Відображення заголовка сторінки та візуалізація змін, стилізовані для компактного відображення
-            st.markdown(f"<p style='font-size:12px;color:gray;'>Зміни для сторінки: {page}</p>",
-                        unsafe_allow_html=True)
-            render_contribution_chart(df)
-        else:
-            # Повідомлення про відсутність змін, відображене дрібним шрифтом
-            st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
-                        unsafe_allow_html=True)
+            if not df.empty:
+                # Відображення заголовка сторінки та візуалізація змін, стилізовані для компактного відображення
+                st.markdown(f"<p style='font-size:12px;color:gray;'>Зміни для сторінки: {page}</p>",
+                            unsafe_allow_html=True)
+                render_contribution_chart(df)
+            else:
+                # Повідомлення про відсутність змін, відображене дрібним шрифтом
+                st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
+                            unsafe_allow_html=True)
 
     st.write("")
     st.markdown("<div style='background-color: lightgray; height: 2px;'></div>", unsafe_allow_html=True)
@@ -349,6 +350,7 @@ def main():
 
         # Додаємо можливість порівняння конкурентів
         with st.expander("Comparison of Keywords Between Competitors", expanded=False):
+            st.title('Comparison of Keywords Between Competitors')
             # Додатковий код для порівняння конкурентів повинен бути з відступом
             selected_competitors = st.multiselect("Select Competitors for Comparison", competitors,
                                                   default=competitors[:2], key="competitors_multiselect")
@@ -373,6 +375,7 @@ def main():
 
         # Додаємо блок для відображення контенту сторінки
         with st.expander("Page Content with Highlighted Keywords", expanded=False):
+            st.title('Page Content with Highlighted Keywords')
 
             # Спочатку вибір конкурента
             competitor_name_content = st.selectbox("Select Competitor", competitors, key="competitor_content_select")
