@@ -348,8 +348,7 @@ def main():
         st.write("")
 
         # Додаємо можливість порівняння конкурентів
-        with st.expander("Click to expand/collapse page content", expanded=False):
-            st.subheader('Comparison of Keywords Between Competitors')
+        with st.expander("Comparison of Keywords Between Competitors", expanded=False):
             # Додатковий код для порівняння конкурентів повинен бути з відступом
             selected_competitors = st.multiselect("Select Competitors for Comparison", competitors,
                                                   default=competitors[:2], key="competitors_multiselect")
@@ -373,8 +372,7 @@ def main():
         st.write("")
 
         # Додаємо блок для відображення контенту сторінки
-        with st.expander("Click to expand/collapse page content", expanded=False):
-            st.subheader("Page Content with Highlighted Keywords")
+        with st.expander("Page Content with Highlighted Keywords", expanded=False):
 
             # Спочатку вибір конкурента
             competitor_name_content = st.selectbox("Select Competitor", competitors, key="competitor_content_select")
