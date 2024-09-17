@@ -264,85 +264,89 @@ def main():
     st.write("")
 
     # Keyword Count and Historical Analysis for Competitors
-    st.title('Keyword Count and Historical Analysis for Competitors')
-    if conn:
-        competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com']
+    with st.expander("Keyword Count and Historical Analysis for Competitors", expanded=False):
+        st.title('Keyword Count and Historical Analysis for Competitors')
 
-        # Дозволяємо користувачеві вибрати конкурента для аналізу
-        competitor_name = st.selectbox("Select Competitor", competitors, key="competitor_select_1")
+        if conn:
+            competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com']
 
-        # Отримуємо дані по ключовим словам для вибраного конкурента
-        df = get_keyword_data(conn, competitor_name)
+            # Дозволяємо користувачеві вибрати конкурента для аналізу
+            competitor_name = st.selectbox("Select Competitor", competitors, key="competitor_select_1")
 
-        # Фільтр по URL (дозволяємо вибрати 1-5 URL)
-        selected_urls = st.multiselect('Select URLs', df['url'].unique(), max_selections=5, key="url_select")
+            # Отримуємо дані по ключовим словам для вибраного конкурента
+            df = get_keyword_data(conn, competitor_name)
 
-        # Фільтр по датах
-        if not df.empty:
-            start_date = pd.to_datetime(st.date_input('Start Date', df['date_checked'].min(), key="start_date")).date()
-            end_date = pd.to_datetime(st.date_input('End Date', df['date_checked'].max(), key="end_date")).date()
+            # Фільтр по URL (дозволяємо вибрати 1-5 URL)
+            selected_urls = st.multiselect('Select URLs', df['url'].unique(), max_selections=5, key="url_select")
 
-            # Перетворення дати без часу
-            df['date_checked'] = pd.to_datetime(df['date_checked']).dt.date
+            # Фільтр по датах
+            if not df.empty:
+                start_date = pd.to_datetime(
+                    st.date_input('Start Date', df['date_checked'].min(), key="start_date")).date()
+                end_date = pd.to_datetime(st.date_input('End Date', df['date_checked'].max(), key="end_date")).date()
 
-            # Фільтрація за діапазоном дат
-            df = df[(df['date_checked'] >= start_date) & (df['date_checked'] <= end_date)]
+                # Перетворення дати без часу
+                df['date_checked'] = pd.to_datetime(df['date_checked']).dt.date
 
-            if df.empty:
-                st.write("No data available for the selected date range.")
+                # Фільтрація за діапазоном дат
+                df = df[(df['date_checked'] >= start_date) & (df['date_checked'] <= end_date)]
 
-        # Фільтруємо дані по вибраним URL
-        if selected_urls:
-            df = df[df['url'].isin(selected_urls)]
-            if df.empty:
-                st.write("No data available for the selected URLs.")
+                if df.empty:
+                    st.write("No data available for the selected date range.")
 
-        # Додаємо можливість згорнути/розгорнути таблицю
-        with st.expander("Click to expand/collapse the data table", expanded=True):
-            # Відображаємо таблицю з даними
-            st.write(df)
+            # Фільтруємо дані по вибраним URL
+            if selected_urls:
+                df = df[df['url'].isin(selected_urls)]
+                if df.empty:
+                    st.write("No data available for the selected URLs.")
 
-        # Відображаємо графік на основі даних
-        if not df.empty:
-            st.subheader(f'Keyword Trend for {competitor_name}')
-            plot_keyword_trend(df, competitor_name)
+            # Додаємо можливість згорнути/розгорнути таблицю
+            with st.expander("Click to expand/collapse the data table", expanded=True):
+                # Відображаємо таблицю з даними
+                st.write(df)
 
-        # Вибираємо URL для аналізу знайдених ключових слів
-        selected_url_for_keywords = st.selectbox('Select URL to view found keywords', df['url'].unique(), key="keyword_url_select")
+            # Відображаємо графік на основі даних
+            if not df.empty:
+                st.subheader(f'Keyword Trend for {competitor_name}')
+                plot_keyword_trend(df, competitor_name)
 
-        # Показуємо знайдені ключові слова для обраного URL
-        if selected_url_for_keywords:
-            selected_page_data = df[df['url'] == selected_url_for_keywords].iloc[0]
+            # Вибираємо URL для аналізу знайдених ключових слів
+            selected_url_for_keywords = st.selectbox('Select URL to view found keywords', df['url'].unique(),
+                                                     key="keyword_url_select")
 
-            # Перевіряємо, чи є ключові слова в записі
-            if selected_page_data['keywords_found'] and isinstance(selected_page_data['keywords_found'], str):
-                # Витягуємо ключові слова і кількість повторень, ігноруючи значення в дужках
-                keywords_dict = extract_keywords(selected_page_data['keywords_found'])
+            # Показуємо знайдені ключові слова для обраного URL
+            if selected_url_for_keywords:
+                selected_page_data = df[df['url'] == selected_url_for_keywords].iloc[0]
 
-                st.write(f"Found keywords on {selected_url_for_keywords}:")
-                st.write(keywords_dict)
+                # Перевіряємо, чи є ключові слова в записі
+                if selected_page_data['keywords_found'] and isinstance(selected_page_data['keywords_found'], str):
+                    # Витягуємо ключові слова і кількість повторень, ігноруючи значення в дужках
+                    keywords_dict = extract_keywords(selected_page_data['keywords_found'])
 
-                # Вибираємо ключові слова для аналізу їх змін у часі
-                selected_keywords = st.multiselect('Select keywords to analyze historical occurrences',
-                                                   list(keywords_dict.keys()), key="keyword_multiselect")
+                    st.write(f"Found keywords on {selected_url_for_keywords}:")
+                    st.write(keywords_dict)
 
-                if selected_keywords:
-                    # Додамо вибір типу графіка нижче
-                    chart_type = st.selectbox(
-                        "Select Chart Type",
-                        ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart', 'Step Chart'],
-                        key="chart_select"
-                    )
+                    # Вибираємо ключові слова для аналізу їх змін у часі
+                    selected_keywords = st.multiselect('Select keywords to analyze historical occurrences',
+                                                       list(keywords_dict.keys()), key="keyword_multiselect")
 
-                    for keyword in selected_keywords:
-                        st.subheader(f'Historical Trend for Keyword: {keyword}')
-                        keyword_history_df = get_keyword_history(conn, competitor_name, keyword)
-                        if not keyword_history_df.empty:
-                            plot_keyword_history(keyword_history_df, keyword, selected_url_for_keywords, chart_type)
-                        else:
-                            st.write(f"No historical data found for keyword: {keyword}")
-            else:
-                st.write(f"No keywords found for URL: {selected_url_for_keywords}")
+                    if selected_keywords:
+                        # Додамо вибір типу графіка нижче
+                        chart_type = st.selectbox(
+                            "Select Chart Type",
+                            ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart', 'Step Chart'],
+                            key="chart_select"
+                        )
+
+                        for keyword in selected_keywords:
+                            st.subheader(f'Historical Trend for Keyword: {keyword}')
+                            keyword_history_df = get_keyword_history(conn, competitor_name, keyword)
+                            if not keyword_history_df.empty:
+                                plot_keyword_history(keyword_history_df, keyword, selected_url_for_keywords, chart_type)
+                            else:
+                                st.write(f"No historical data found for keyword: {keyword}")
+                else:
+                    st.write(f"No keywords found for URL: {selected_url_for_keywords}")
 
         st.write("")
         st.markdown("<div style='background-color: lightgray; height: 2px;'></div>", unsafe_allow_html=True)
