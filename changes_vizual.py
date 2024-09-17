@@ -107,7 +107,7 @@ def main():
 
         if view_all:
             # Якщо обрано перегляд всіх змін, виконуємо запит для всіх змін конкурента
-            query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+            query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}'"
             df = pd.read_sql(query, conn)
 
             if not df.empty:
@@ -117,7 +117,7 @@ def main():
                 st.write("Немає змін для цього конкурента.")
         else:
             # Якщо перегляд змін для окремих сторінок
-            page_query = f"SELECT DISTINCT url FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+            page_query = f"SELECT DISTINCT url FROM content_changes WHERE competitor_name = '{competitor}'"
             pages = pd.read_sql(page_query, conn)['url'].tolist()
 
             if not pages:
@@ -127,7 +127,7 @@ def main():
             page = st.selectbox("Виберіть сторінку", pages)
 
             # Отримання даних змін для вибраної сторінки
-            query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}' AND url = '{page}'"
+            query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}' AND url = '{page}'"
             df = pd.read_sql(query, conn)
 
             if not df.empty:
