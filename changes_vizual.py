@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import psycopg2
-from calendar import monthrange
+
 
 
 # Підключення до бази даних PostgreSQL
@@ -20,20 +20,14 @@ def connect_to_db():
         return None
 
 
-# Функція для отримання кількості днів у кожному місяці
-def get_month_days():
-    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    days_in_months = [monthrange(datetime.now().year, i + 1)[1] for i in range(12)]
-    return list(zip(months, days_in_months))
-
-# Оновлюємо функцію рендерингу сітки змін
+# Оновлюємо функцію рендерингу сітки змін за місяцями
 def render_contribution_chart_by_months(change_dates):
     st.markdown(
         """
         <style>
         .contribution-box {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             margin: 2px;
             display: inline-block;
             background-color: #ebedf0;
@@ -44,14 +38,14 @@ def render_contribution_chart_by_months(change_dates):
         .contribution-level-4 { background-color: #196127; }
         .contribution-box-container {
             display: flex;
-            justify-content: flex-start;
-            gap: 20px;
-            overflow-x: auto;
+            justify-content: space-around;
         }
         .month-column {
             display: grid;
-            grid-template-columns: repeat(7, 1fr); /* Максимум 7 днів у рядку */
-            grid-gap: 4px;
+            grid-template-rows: repeat(7, 14px);  /* 7 днів на рядок */
+            grid-auto-flow: column;  /* Заповнення по колонках */
+            gap: 4px;
+            margin-right: 20px;
             text-align: center;
         }
         .month-title {
@@ -66,22 +60,25 @@ def render_contribution_chart_by_months(change_dates):
     )
 
     change_dates['change_date'] = pd.to_datetime(change_dates['change_date']).dt.date
-    changes_by_date = change_dates.groupby('change_date').size()
+    changes_by_date = change_dates.groupby('change_date').size()  # Групуємо зміни за датою
 
-    months_data = get_month_days()
+    # Використовуємо зміни за датою
+    months = {
+        'Jan': 31, 'Feb': 28, 'Mar': 31, 'Apr': 30, 'May': 31, 'Jun': 30,
+        'Jul': 31, 'Aug': 31, 'Sep': 30, 'Oct': 31, 'Nov': 30, 'Dec': 31
+    }
 
-    # Початок HTML для візуалізації
     st.markdown('<div class="contribution-box-container">', unsafe_allow_html=True)
 
-    # Генеруємо сітку для кожного місяця
-    for month, days in months_data:
+    for month, days in months.items():
         month_html = f'<div class="month-column"><div class="month-title">{month}</div>'
 
-        # Рендеримо квадратики по тижнях (7 днів у рядку)
         for day in range(1, days + 1):
-            date = datetime(datetime.now().year, months_data.index((month, days)) + 1, day).date()
+            # Формуємо дату для кожного дня місяця
+            date = datetime(datetime.now().year, list(months.keys()).index(month) + 1, day).date()
             count = changes_by_date.get(date, 0)
 
+            # Вибираємо рівень кольору для кількості змін
             if count == 0:
                 level = 'contribution-box'
             elif count <= 1:
@@ -98,7 +95,6 @@ def render_contribution_chart_by_months(change_dates):
 
         month_html += '</div>'
 
-        # Додаємо сітку для кожного місяця
         st.markdown(month_html, unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
