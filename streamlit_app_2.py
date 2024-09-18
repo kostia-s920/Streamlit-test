@@ -10,10 +10,13 @@ from datetime import datetime
 def connect_to_db():
     try:
         connection = psycopg2.connect(
-            host="localhost",
-            database="competitor_content",
-            user="kostia.s920",
-            password="1502"
+            host="academyocean-bd-academyocean-1.d.aivencloud.com",
+            database="defaultdb",
+            user="avnadmin",
+            password="AVNS_mxvUfMAy4D61hf1zeU1",
+            port="12559",
+            sslmode="require",
+            sslrootcert="/Users/sojik/Desktop/ca.pem"
         )
         return connection
     except Exception as e:
@@ -232,7 +235,7 @@ def main():
         with st.expander("Візуалізація змін контенту", expanded=False):
             st.subheader('Візуалізація змін контенту для конкурентів')
             competitor = st.selectbox("Виберіть конкурента",
-                                      ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com'],
+                                      ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com','academyocean_com'],
                                       key="content_competitor_selectbox")
 
             view_all = st.checkbox("Показати всі зміни конкурента", key="content_view_all_checkbox")
@@ -279,7 +282,7 @@ def main():
         with st.expander("Загальна кількість ключових слів", expanded=False):
             st.subheader('Аналіз Загальної кількості ключових слів конкурента')
 
-            competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com']
+            competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com', 'academyocean_com']
             competitor_name = st.selectbox("Виберіть конкурента", competitors, key="keyword_competitor_selectbox")
             df = get_keyword_data(conn, competitor_name)
 
