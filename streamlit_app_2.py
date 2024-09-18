@@ -241,7 +241,7 @@ def main():
             view_all = st.checkbox("Показати всі зміни конкурента", key="content_view_all_checkbox")
 
             if view_all:
-                query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+                query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}'"
                 df = pd.read_sql(query, conn)
 
                 if not df.empty:
@@ -253,7 +253,7 @@ def main():
                 else:
                     st.write("Немає змін для цього конкурента.")
             else:
-                page_query = f"SELECT DISTINCT url FROM content_changes_temp WHERE competitor_name = '{competitor}'"
+                page_query = f"SELECT DISTINCT url FROM content_changes WHERE competitor_name = '{competitor}'"
                 pages = pd.read_sql(page_query, conn)['url'].tolist()
 
                 if not pages:
@@ -262,7 +262,7 @@ def main():
 
                 page = st.selectbox("Виберіть сторінку", pages, key="content_page_selectbox")
 
-                query = f"SELECT change_date FROM content_changes_temp WHERE competitor_name = '{competitor}' AND url = '{page}'"
+                query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}' AND url = '{page}'"
                 df = pd.read_sql(query, conn)
 
                 if not df.empty:
@@ -282,7 +282,7 @@ def main():
         with st.expander("Загальна кількість ключових слів", expanded=False):
             st.subheader('Аналіз Загальної кількості ключових слів конкурента')
 
-            competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com','academyocean_com']
+            competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com', 'academyocean_com']
             competitor_name = st.selectbox("Виберіть конкурента", competitors, key="keyword_competitor_selectbox")
             df = get_keyword_data(conn, competitor_name)
 
