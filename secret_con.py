@@ -6,7 +6,7 @@ from datetime import datetime
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
-        # Підключаємося до бази даних, використовуючи секрети зі Streamlit
+        # Підключаємося до бази даних за допомогою секретів
         connection = psycopg2.connect(
             host=st.secrets["db_host"],
             database=st.secrets["db_name"],
@@ -16,12 +16,11 @@ def connect_to_db():
             sslmode=st.secrets["ssl_mode"],
             sslrootcert=st.secrets["db_ssl_root_cert"]
         )
-        st.write("Successfully connected to the database")
+        st.write("Successfully connected to the database!")
         return connection
     except Exception as e:
         st.error(f"Error connecting to the database: {e}")
         return None
-
 
 # Функція для рендерингу сітки змін за місяцями
 def render_contribution_chart_by_months(change_dates, selected_year):
