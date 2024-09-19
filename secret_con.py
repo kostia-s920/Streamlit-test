@@ -3,6 +3,7 @@ import psycopg2
 import pandas as pd
 import streamlit.components.v1 as components
 from difflib import HtmlDiff
+import re
 
 
 # Функція для підключення до бази даних PostgreSQL
@@ -62,26 +63,34 @@ def highlight_changes(old_value, new_value):
     return html_diff
 
 
+# Функція для вилучення ключових слів і кількості їх повторень, ігноруючи значення в дужках
+def extract_keywords(row):
+    pattern = re.findall(r'([\w\s-]+?)\s*-\s*(\d+)\s*разів', row)
+    keywords_dict = {match[0].strip(): int(match[1]) for match in pattern}
+    return keywords_dict
+
+
 # Функція для відображення змін у ключових словах
 def visualize_keyword_changes(old_keywords, new_keywords):
-    old_keyword_dict = parse_keywords(old_keywords)
-    new_keyword_dict = parse_keywords(new_keywords)
+    old_keyword_dict = extract_keywords(old_keywords)
+    new_keyword_dict = extract_keywords(new_keywords)
 
     st.write("### Зміни в ключових словах")
     changes = []
 
     # Порівняння ключових слів, що були додані або змінені
-    for keyword, count in new_keyword_dict.items():
-        if keyword not in old_keyword_dict:
-            changes.append({"Ключове слово": keyword, "Зміна": "Додано", "Кількість": f"{count} раз"})
-        elif old_keyword_dict[keyword] != count:
+    for keyword, new_count in new_keyword_dict.items():
+        old_count = old_keyword_dict.get(keyword, None)
+        if old_count is None:
+            changes.append({"Ключове слово": keyword, "Зміна": "Додано", "Кількість": f"{new_count} разів"})
+        elif old_count != new_count:
             changes.append({"Ключове слово": keyword, "Зміна": "Змінено",
-                            "Кількість": f"Було: {old_keyword_dict[keyword]}, Стало: {count}"})
+                            "Кількість": f"Було: {old_count} разів, Стало: {new_count} разів"})
 
     # Пошук видалених ключових слів
-    for keyword, count in old_keyword_dict.items():
+    for keyword, old_count in old_keyword_dict.items():
         if keyword not in new_keyword_dict:
-            changes.append({"Ключове слово": keyword, "Зміна": "Видалено", "Кількість": "-"})
+            changes.append({"Ключове слово": keyword, "Зміна": "Видалено", "Кількість": f"{old_count} разів"})
 
     # Створення таблиці змін
     if changes:
@@ -89,19 +98,6 @@ def visualize_keyword_changes(old_keywords, new_keywords):
         st.table(df_changes)
     else:
         st.write("Немає змін у ключових словах.")
-
-
-# Функція для парсингу ключових слів у форматі 'keyword - count разів'
-def parse_keywords(keywords):
-    keyword_dict = {}
-    if keywords:
-        for entry in keywords.split(", "):
-            try:
-                keyword, count = entry.split(" - ")
-                keyword_dict[keyword.strip()] = int(count.split()[0])
-            except ValueError:
-                continue
-    return keyword_dict
 
 
 # Основна функція для інтерфейсу користувача з візуалізацією змін контенту конкурентів
@@ -139,8 +135,11 @@ def main():
                             new_value = row['new_value'] or ''
 
                             if row['field_changed'] == 'keywords_found':
-                                # Якщо поле змінилося у `keywords_found`, використовуємо нову логіку
+                                # Якщо змінилося поле keywords_found, показуємо зміни в ключових словах
                                 visualize_keyword_changes(old_value, new_value)
+                            elif row['field_changed'] == 'keywords_count':
+                                # Якщо змінилося поле keywords_count, показуємо зміни кількості ключових слів
+                                st.write(f"Кількість ключових слів було: {old_value}, стало: {new_value}")
                             else:
                                 if old_value.strip() and new_value.strip():  # Перевірка, щоб значення не були порожніми
                                     html_diff = highlight_changes(old_value, new_value)
