@@ -1,9 +1,9 @@
 import streamlit as st
-import psycopg2
 import pandas as pd
+import psycopg2
+import re
 import streamlit.components.v1 as components
 from difflib import HtmlDiff
-import re
 
 
 # Функція для підключення до бази даних PostgreSQL
@@ -56,51 +56,51 @@ def get_changes(conn, competitor_name, page_url, date):
     return pd.read_sql(query, conn)
 
 
-# Функція для підсвічування змін у тексті
-def highlight_changes(old_value, new_value):
-    diff = HtmlDiff()
-    html_diff = diff.make_file(old_value.splitlines(), new_value.splitlines(), context=True)
-    return html_diff
-
-
-# Функція для вилучення ключових слів і кількості їх повторень, ігноруючи значення в дужках
+# Функція для вилучення ключових слів і кількості їх повторень
 def extract_keywords(row):
     pattern = re.findall(r'([\w\s-]+?)\s*-\s*(\d+)\s*разів', row)
     keywords_dict = {match[0].strip(): int(match[1]) for match in pattern}
     return keywords_dict
 
 
-# Функція для відображення змін у ключових словах
-def visualize_keyword_changes(old_keywords, new_keywords):
-    old_keyword_dict = extract_keywords(old_keywords)
-    new_keyword_dict = extract_keywords(new_keywords)
+# Функція для застосування стилів до таблиці
+def apply_table_styles():
+    st.markdown(
+        """
+        <style>
+        .styled-table {
+            border-collapse: collapse;
+            margin: 25px 0;
+            font-size: 1.0em;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-width: 400px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        }
+        .styled-table thead tr {
+            background-color: #009879;
+            color: #ffffff;
+            text-align: left;
+        }
+        .styled-table th,
+        .styled-table td {
+            padding: 12px 15px;
+        }
+        .styled-table tbody tr {
+            border-bottom: 1px solid #dddddd;
+        }
+        .styled-table tbody tr:nth-of-type(even) {
+            background-color: #f3f3f3;
+        }
+        .styled-table tbody tr:last-of-type {
+            border-bottom: 2px solid #009879;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
-    st.write("### Зміни в ключових словах")
-    changes = []
 
-    # Порівняння ключових слів, що були додані або змінені
-    for keyword, new_count in new_keyword_dict.items():
-        old_count = old_keyword_dict.get(keyword, None)
-        if old_count is None:
-            changes.append({"Ключове слово": keyword, "Зміна": "Додано", "Кількість": f"{new_count} разів"})
-        elif old_count != new_count:
-            changes.append({"Ключове слово": keyword, "Зміна": "Змінено",
-                            "Кількість": f"Було: {old_count} разів, Стало: {new_count} разів"})
-
-    # Пошук видалених ключових слів
-    for keyword, old_count in old_keyword_dict.items():
-        if keyword not in new_keyword_dict:
-            changes.append({"Ключове слово": keyword, "Зміна": "Видалено", "Кількість": f"{old_count} разів"})
-
-    # Створення таблиці змін
-    if changes:
-        df_changes = pd.DataFrame(changes)
-        st.table(df_changes)
-    else:
-        st.write("Немає змін у ключових словах.")
-
-
-# Основна функція для інтерфейсу користувача з візуалізацією змін контенту конкурентів
+# Основна функція для інтерфейсу користувача
 def main():
     st.title("Візуалізація змін конкурентів")
 
@@ -128,25 +128,39 @@ def main():
                     if not changes.empty:
                         st.write(f"Зміни для {selected_page} на дату {selected_date}:")
 
-                        # Відображення змін з підсвічуванням
+                        # Перевірка, якщо змінилось поле keywords_count
                         for index, row in changes.iterrows():
-                            st.subheader(f"Поле змінено: {row['field_changed']}")
-                            old_value = row['old_value'] or ''
-                            new_value = row['new_value'] or ''
+                            if row['field_changed'] == 'keywords_count':
+                                st.subheader(f"Поле змінено: {row['field_changed']}")
+                                st.write(f"Кількість ключових слів було: {row['old_value']}, стало: {row['new_value']}")
 
+                            # Перевірка, якщо змінилось поле keywords_found
                             if row['field_changed'] == 'keywords_found':
-                                # Якщо змінилося поле keywords_found, показуємо зміни в ключових словах
-                                visualize_keyword_changes(old_value, new_value)
-                            elif row['field_changed'] == 'keywords_count':
-                                # Якщо змінилося поле keywords_count, показуємо зміни кількості ключових слів
-                                st.write(f"Кількість ключових слів було: {old_value}, стало: {new_value}")
-                            else:
-                                if old_value.strip() and new_value.strip():  # Перевірка, щоб значення не були порожніми
-                                    html_diff = highlight_changes(old_value, new_value)
-                                    # Рендеринг HTML-коду за допомогою Streamlit components
-                                    components.html(html_diff, height=400, scrolling=True)
+                                st.subheader(f"Поле змінено: {row['field_changed']}")
+                                old_keywords = extract_keywords(row['old_value'] or '')
+                                new_keywords = extract_keywords(row['new_value'] or '')
+
+                                keyword_changes = []
+                                for keyword in set(old_keywords.keys()).union(set(new_keywords.keys())):
+                                    old_count = old_keywords.get(keyword, 0)
+                                    new_count = new_keywords.get(keyword, 0)
+                                    if old_count != new_count:
+                                        keyword_changes.append({
+                                            'Ключове слово': keyword,
+                                            'Зміна': 'Змінено',
+                                            'Кількість': f'Було: {old_count} разів, Стало: {new_count} разів'
+                                        })
+
+                                if keyword_changes:
+                                    # Застосовуємо стилі до таблиці
+                                    apply_table_styles()
+
+                                    # Показуємо таблицю з ключовими словами
+                                    df_changes = pd.DataFrame(keyword_changes)
+                                    st.markdown(df_changes.to_html(classes='styled-table', index=False),
+                                                unsafe_allow_html=True)
                                 else:
-                                    st.write("Немає змін у контенті.")
+                                    st.write("Немає змін у ключових словах.")
 
                     else:
                         st.write("Немає змін для обраної сторінки та дати.")
