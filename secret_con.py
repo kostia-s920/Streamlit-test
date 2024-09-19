@@ -1,9 +1,8 @@
 import streamlit as st
 import pandas as pd
 import psycopg2
-from difflib import HtmlDiff
 import re
-import streamlit.components.v1 as components
+import plotly.graph_objects as go
 
 
 # Функція для підключення до бази даних PostgreSQL
@@ -54,11 +53,31 @@ def get_page_data(conn, competitor_name, page_url, date):
     return pd.read_sql(query, conn)
 
 
-# Функція для підсвічування змін у контенті
-def highlight_changes(old_value, new_value):
-    diff = HtmlDiff()
-    html_diff = diff.make_file(old_value.splitlines(), new_value.splitlines(), context=True)
-    return html_diff
+# Функція для порівняння контенту і візуалізації змін за допомогою Plotly
+def visualize_content_changes(content_before, content_after):
+    before_lines = content_before.splitlines()
+    after_lines = content_after.splitlines()
+
+    # Визначаємо кольори для кожного рядка
+    line_colors = []
+    for old_line, new_line in zip(before_lines, after_lines):
+        if old_line == new_line:
+            line_colors.append('white')  # Немає змін
+        else:
+            line_colors.append('yellow')  # Зміна у рядку
+
+    # Створюємо таблицю Plotly
+    fig = go.Figure(data=[go.Table(
+        header=dict(values=["Рядок до", "Рядок після"],
+                    fill_color='paleturquoise',
+                    align='left'),
+        cells=dict(values=[before_lines, after_lines],
+                   fill_color=[['white'] * len(before_lines), line_colors],
+                   align='left'))
+    ])
+
+    fig.update_layout(width=800, height=400)
+    st.plotly_chart(fig)
 
 
 # Функція для вилучення ключових слів і кількості їх повторень
@@ -87,6 +106,7 @@ def compare_keywords(old_keywords, new_keywords):
         result.append((k, 'Змінено', f"{old_v} разів", f"{new_v} разів", 'yellow'))
 
     return pd.DataFrame(result, columns=['Ключове слово', 'Зміна', 'Було', 'Стало', 'Колір'])
+
 
 # Функція для відображення легенди кольорів
 def show_color_legend():
@@ -148,8 +168,7 @@ def main():
                         # Перевірка на наявність змін у контенті
                         if data1['content'].values[0] != data2['content'].values[0]:
                             st.subheader("Зміни в контенті:")
-                            content_diff = highlight_changes(data1['content'].values[0], data2['content'].values[0])
-                            components.html(content_diff, height=400, scrolling=True)
+                            visualize_content_changes(data1['content'].values[0], data2['content'].values[0])
 
                         # Порівняння keywords_found у головній функції
                         if data1['keywords_found'].values[0] and data2['keywords_found'].values[0]:
