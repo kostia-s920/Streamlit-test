@@ -80,14 +80,13 @@ def compare_keywords(old_keywords, new_keywords):
 
     result = []
     for k, v in added.items():
-        result.append((k, 'Додано', f"Стало: {v} разів", 'green'))
+        result.append((k, 'Додано', '-', f"{v} разів", 'green'))
     for k, v in removed.items():
-        result.append((k, 'Видалено', f"Було: {v} разів", 'red'))
+        result.append((k, 'Видалено', f"{v} разів", '-', 'red'))
     for k, (old_v, new_v) in changed.items():
-        result.append((k, 'Змінено', f"Було: {old_v} разів, Стало: {new_v} разів", 'yellow'))
+        result.append((k, 'Змінено', f"{old_v} разів", f"{new_v} разів", 'yellow'))
 
-    return pd.DataFrame(result, columns=['Ключове слово', 'Зміна', 'Кількість', 'Колір'])
-
+    return pd.DataFrame(result, columns=['Ключове слово', 'Зміна', 'Було', 'Стало', 'Колір'])
 
 # Функція для відображення легенди кольорів
 def show_color_legend():
@@ -132,25 +131,33 @@ def main():
                         st.write(f"Порівняння для сторінки {selected_page} між {selected_date1} та {selected_date2}:")
 
                         # Порівняння Title, H1, Description
-                        st.subheader("Зміни в метаданих:")
+                        metadata_changes = []
                         for col in ['title', 'h1', 'description']:
                             if data1[col].values[0] != data2[col].values[0]:
-                                st.write(f"Поле змінено: {col}")
-                                st.write(f"Було: {data1[col].values[0]}")
-                                st.write(f"Стало: {data2[col].values[0]}")
+                                metadata_changes.append({
+                                    'Поле': col,
+                                    'Було': data1[col].values[0],
+                                    'Стало': data2[col].values[0]
+                                })
+
+                        if metadata_changes:
+                            st.subheader("Зміни в метаданих:")
+                            metadata_df = pd.DataFrame(metadata_changes)
+                            st.table(metadata_df)
 
                         # Порівняння контенту з підсвічуванням
                         st.subheader("Зміни в контенті:")
                         content_diff = highlight_changes(data1['content'].values[0], data2['content'].values[0])
                         components.html(content_diff, height=400, scrolling=True)
 
-                        # Порівняння keywords_found
-                        st.subheader("Зміни в ключових словах:")
-                        keywords_comparison = compare_keywords(data1['keywords_found'].values[0],
-                                                               data2['keywords_found'].values[0])
-                        if not keywords_comparison.empty:
-                            st.table(keywords_comparison.style.applymap(lambda val: f'background-color: {val}',
-                                                                        subset=['Колір']))
+                        # Порівняння keywords_found у головній функції
+                        if data1['keywords_found'].values[0] and data2['keywords_found'].values[0]:
+                            keywords_comparison = compare_keywords(data1['keywords_found'].values[0],
+                                                                   data2['keywords_found'].values[0])
+                            if not keywords_comparison.empty:
+                                st.subheader("Зміни в ключових словах:")
+                                st.table(keywords_comparison.style.applymap(lambda val: f'background-color: {val}',
+                                                                            subset=['Колір']))
 
                         # Порівняння keywords_count
                         if data1['keywords_count'].values[0] != data2['keywords_count'].values[0]:
