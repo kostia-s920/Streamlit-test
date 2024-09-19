@@ -3,18 +3,23 @@ import psycopg2
 import pandas as pd
 from datetime import datetime
 
-# Підключення до бази даних PostgreSQL
+# Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
+        # Підключаємося до бази даних, використовуючи секрети зі Streamlit
         connection = psycopg2.connect(
-            host="localhost",
-            database="competitor_content",
-            user="kostia.s920",
-            password="1502"
+            host=st.secrets["db_host"],
+            database=st.secrets["db_name"],
+            user=st.secrets["db_username"],
+            password=st.secrets["db_password"],
+            port=st.secrets["db_port"],
+            sslmode=st.secrets["ssl_mode"],
+            sslrootcert=st.secrets["db_ssl_root_cert"]
         )
+        st.write("Successfully connected to the database")
         return connection
     except Exception as e:
-        st.error(f"Error connecting to database: {e}")
+        st.error(f"Error connecting to the database: {e}")
         return None
 
 
