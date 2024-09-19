@@ -3,6 +3,7 @@ import pandas as pd
 import psycopg2
 from difflib import HtmlDiff
 import re
+import streamlit.components.v1 as components
 
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
