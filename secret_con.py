@@ -5,7 +5,6 @@ import re
 import streamlit.components.v1 as components
 from difflib import HtmlDiff
 
-
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
@@ -20,18 +19,15 @@ def connect_to_db():
         st.error(f"Error connecting to database: {e}")
         return None
 
-
 # Функція для отримання списку конкурентів
 def get_competitors(conn):
     query = "SELECT DISTINCT competitor_name FROM content_changes"
     return pd.read_sql(query, conn)['competitor_name'].tolist()
 
-
 # Функція для отримання списку URL для обраного конкурента
 def get_pages_for_competitor(conn, competitor_name):
     query = f"SELECT DISTINCT url FROM content_changes WHERE competitor_name = '{competitor_name}'"
     return pd.read_sql(query, conn)['url'].tolist()
-
 
 # Функція для отримання дат для обраної сторінки та конкурента
 def get_dates_for_page(conn, competitor_name, page_url):
@@ -42,7 +38,6 @@ def get_dates_for_page(conn, competitor_name, page_url):
         ORDER BY change_date ASC
     """
     return pd.read_sql(query, conn)['change_date'].tolist()
-
 
 # Функція для отримання змін для порівняння за обраною сторінкою і датою
 def get_changes(conn, competitor_name, page_url, date):
@@ -55,13 +50,11 @@ def get_changes(conn, competitor_name, page_url, date):
     """
     return pd.read_sql(query, conn)
 
-
 # Функція для вилучення ключових слів і кількості їх повторень
 def extract_keywords(row):
     pattern = re.findall(r'([\w\s-]+?)\s*-\s*(\d+)\s*разів', row)
     keywords_dict = {match[0].strip(): int(match[1]) for match in pattern}
     return keywords_dict
-
 
 # Функція для застосування стилів до таблиці
 def apply_table_styles():
@@ -99,7 +92,6 @@ def apply_table_styles():
         unsafe_allow_html=True
     )
 
-
 # Основна функція для інтерфейсу користувача
 def main():
     st.title("Візуалізація змін конкурентів")
@@ -131,8 +123,13 @@ def main():
                         # Перевірка, якщо змінилось поле keywords_count
                         for index, row in changes.iterrows():
                             if row['field_changed'] == 'keywords_count':
-                                st.subheader(f"Поле змінено: {row['field_changed']}")
-                                st.write(f"Кількість ключових слів було: {row['old_value']}, стало: {row['new_value']}")
+                                apply_table_styles()
+                                count_table = pd.DataFrame({
+                                    'Було': [row['old_value']],
+                                    'Стало': [row['new_value']]
+                                })
+                                st.markdown(f"<b>Поле змінено: {row['field_changed']}</b>", unsafe_allow_html=True)
+                                st.markdown(count_table.to_html(classes='styled-table', index=False), unsafe_allow_html=True)
 
                             # Перевірка, якщо змінилось поле keywords_found
                             if row['field_changed'] == 'keywords_found':
@@ -157,16 +154,13 @@ def main():
 
                                     # Показуємо таблицю з ключовими словами
                                     df_changes = pd.DataFrame(keyword_changes)
-                                    st.markdown(df_changes.to_html(classes='styled-table', index=False),
-                                                unsafe_allow_html=True)
+                                    st.markdown(df_changes.to_html(classes='styled-table', index=False), unsafe_allow_html=True)
                                 else:
                                     st.write("Немає змін у ключових словах.")
-
                     else:
-                        st.write("Немає змін для обраної сторінки та дати.")
+                        st.write(f"Зміни для сторінки {selected_page} відсутні.")
 
     conn.close()
-
 
 if __name__ == "__main__":
     main()
