@@ -1,6 +1,7 @@
 import streamlit as st
 import psycopg2
 import pandas as pd
+import streamlit.components.v1 as components
 from difflib import HtmlDiff
 
 # Функція для підключення до бази даних PostgreSQL
@@ -88,7 +89,10 @@ def main():
                             old_value = row['old_value'] or ''
                             new_value = row['new_value'] or ''
                             html_diff = highlight_changes(old_value, new_value)
-                            st.markdown(html_diff, unsafe_allow_html=True)
+
+                            # Рендеринг HTML-коду за допомогою Streamlit components
+                            components.html(html_diff, height=400, scrolling=True)
+
                     else:
                         st.write("Немає змін для обраної сторінки та дати.")
 
