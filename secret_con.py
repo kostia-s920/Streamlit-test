@@ -2,10 +2,21 @@ import streamlit as st
 import psycopg2
 import pandas as pd
 from datetime import datetime
+import tempfile
+import base64
+
 
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
+        # Декодуємо сертифікат із Base64
+        ssl_cert_decoded = base64.b64decode(st.secrets["db_ssl_root_cert"])
+
+        # Створюємо тимчасовий файл для зберігання сертифіката
+        with tempfile.NamedTemporaryFile(delete=False) as cert_file:
+            cert_file.write(ssl_cert_decoded)
+            cert_file_path = cert_file.name
+
         # Підключаємося до бази даних за допомогою секретів
         connection = psycopg2.connect(
             host=st.secrets["db_host"],
@@ -14,10 +25,12 @@ def connect_to_db():
             password=st.secrets["db_password"],
             port=st.secrets["db_port"],
             sslmode=st.secrets["ssl_mode"],
-            sslrootcert=st.secrets["db_ssl_root_cert"]
+            sslrootcert=cert_file_path  # Передаємо шлях до тимчасового файлу з сертифікатом
         )
+
         st.write("Successfully connected to the database!")
         return connection
+
     except Exception as e:
         st.error(f"Error connecting to the database: {e}")
         return None
