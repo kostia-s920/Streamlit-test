@@ -5,6 +5,7 @@ from difflib import HtmlDiff
 import re
 import streamlit.components.v1 as components
 
+
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
@@ -19,15 +20,18 @@ def connect_to_db():
         st.error(f"Error connecting to database: {e}")
         return None
 
+
 # Функція для отримання списку конкурентів
 def get_competitors(conn):
     query = "SELECT DISTINCT competitor_name FROM content_changes"
     return pd.read_sql(query, conn)['competitor_name'].tolist()
 
+
 # Функція для отримання списку URL для обраного конкурента
 def get_pages_for_competitor(conn, competitor_name):
     query = f"SELECT DISTINCT url FROM {competitor_name}"
     return pd.read_sql(query, conn)['url'].tolist()
+
 
 # Функція для отримання дат для сторінки
 def get_dates_for_page(conn, competitor_name, page_url):
@@ -39,6 +43,7 @@ def get_dates_for_page(conn, competitor_name, page_url):
     """
     return pd.read_sql(query, conn)['date_checked'].tolist()
 
+
 # Функція для отримання даних для конкретної сторінки на обрану дату
 def get_page_data(conn, competitor_name, page_url, date):
     query = f"""
@@ -48,17 +53,20 @@ def get_page_data(conn, competitor_name, page_url, date):
     """
     return pd.read_sql(query, conn)
 
+
 # Функція для підсвічування змін у контенті
 def highlight_changes(old_value, new_value):
     diff = HtmlDiff()
     html_diff = diff.make_file(old_value.splitlines(), new_value.splitlines(), context=True)
     return html_diff
 
+
 # Функція для вилучення ключових слів і кількості їх повторень
 def extract_keywords(row):
     pattern = re.findall(r'([\w\s-]+?)\s*-\s*(\d+)\s*разів', row)
     keywords_dict = {match[0].strip(): int(match[1]) for match in pattern}
     return keywords_dict
+
 
 # Функція для порівняння keywords_found
 def compare_keywords(old_keywords, new_keywords):
@@ -79,6 +87,19 @@ def compare_keywords(old_keywords, new_keywords):
         result.append((k, 'Змінено', f"Було: {old_v} разів, Стало: {new_v} разів", 'yellow'))
 
     return pd.DataFrame(result, columns=['Ключове слово', 'Зміна', 'Кількість', 'Колір'])
+
+
+# Функція для відображення легенди кольорів
+def show_color_legend():
+    st.markdown(
+        """
+        **Пояснення кольорів:**
+        - 🟢 **Додано** — Ключове слово було додано.
+        - 🔴 **Видалено** — Ключове слово було видалено.
+        - 🟡 **Змінено** — Кількість згадувань ключового слова була змінена.
+        """
+    )
+
 
 # Основна функція для інтерфейсу користувача
 def main():
@@ -125,9 +146,11 @@ def main():
 
                         # Порівняння keywords_found
                         st.subheader("Зміни в ключових словах:")
-                        keywords_comparison = compare_keywords(data1['keywords_found'].values[0], data2['keywords_found'].values[0])
+                        keywords_comparison = compare_keywords(data1['keywords_found'].values[0],
+                                                               data2['keywords_found'].values[0])
                         if not keywords_comparison.empty:
-                            st.table(keywords_comparison.style.applymap(lambda val: f'background-color: {val}', subset=['Колір']))
+                            st.table(keywords_comparison.style.applymap(lambda val: f'background-color: {val}',
+                                                                        subset=['Колір']))
 
                         # Порівняння keywords_count
                         if data1['keywords_count'].values[0] != data2['keywords_count'].values[0]:
@@ -137,10 +160,14 @@ def main():
                                 'Стало': [data2['keywords_count'].values[0]]
                             }))
 
+                        # Показуємо легенду
+                        show_color_legend()
+
                     else:
                         st.write("Для обраних дат немає даних для порівняння.")
 
     conn.close()
+
 
 if __name__ == "__main__":
     main()
