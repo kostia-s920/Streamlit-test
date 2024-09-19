@@ -1,7 +1,8 @@
 import streamlit as st
+import psycopg2
 import base64
 
-# Отримання секретів з Streamlit
+# Отримання секретів
 DB_USERNAME = st.secrets["DB_USERNAME"]
 DB_PASSWORD = st.secrets["DB_PASSWORD"]
 DB_HOST = st.secrets["DB_HOST"]
@@ -11,22 +12,27 @@ SSL_MODE = st.secrets["SSL_MODE"]
 DB_SSL_ROOT_CERT_BASE64 = st.secrets["DB_SSL_ROOT_CERT"]
 
 # Декодування SSL сертифіката
-try:
-    ssl_cert_decoded = base64.b64decode(DB_SSL_ROOT_CERT_BASE64)
-    st.write("SSL Root Certificate decoded successfully!")
-    st.write(ssl_cert_decoded[:100])  # Виведемо перші 100 символів для тестування
-except Exception as e:
-    st.write("Error decoding SSL Root Certificate:", str(e))
+ssl_cert_decoded = base64.b64decode(DB_SSL_ROOT_CERT_BASE64)
 
-# Виведення для тестування секретів
-st.title("Test Streamlit Secrets")
-st.write("DB_USERNAME:", DB_USERNAME)
-st.write("DB_PASSWORD:", DB_PASSWORD)
-st.write("DB_HOST:", DB_HOST)
-st.write("DB_NAME:", DB_NAME)
-st.write("DB_PORT:", DB_PORT)
-st.write("SSL_MODE:", SSL_MODE)
+# Запис сертифіката в тимчасовий файл
+with open("ca_cert.pem", "wb") as f:
+    f.write(ssl_cert_decoded)
 
-# Запустити функцію тестування
-if __name__ == "__main__":
-    st.title("Test Streamlit Secrets")
+# Підключення до бази даних
+conn = psycopg2.connect(
+    host=DB_HOST,
+    database=DB_NAME,
+    user=DB_USERNAME,
+    password=DB_PASSWORD,
+    port=DB_PORT,
+    sslmode=SSL_MODE,
+    sslrootcert="ca_cert.pem"
+)
+
+# Тестовий запит
+cursor = conn.cursor()
+cursor.execute("SELECT version();")
+db_version = cursor.fetchone()
+
+# Виведення результату
+st.write(f"Database version: {db_version[0]}")
