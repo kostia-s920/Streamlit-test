@@ -2,16 +2,17 @@ import os
 import base64
 import streamlit as st
 
-def test_secrets():
-    # Отримання секретів із середовища
-    DB_USERNAME = os.getenv('DB_USERNAME')
-    DB_PASSWORD = os.getenv('DB_PASSWORD')
-    DB_HOST = os.getenv('DB_HOST')
-    DB_NAME = os.getenv('DB_NAME')
-    DB_PORT = os.getenv('DB_PORT')
-    SSL_MODE = os.getenv('SSL_MODE')
-    DB_SSL_ROOT_CERT_BASE64 = os.getenv('DB_SSL_ROOT_CERT')
+# Отримуємо секрети
+DB_USERNAME = os.getenv('DB_USERNAME')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_HOST = os.getenv('DB_HOST')
+DB_PORT = os.getenv('DB_PORT')
+DB_NAME = os.getenv('DB_NAME')
+SSL_MODE = os.getenv('SSL_MODE')
+DB_SSL_ROOT_CERT = os.getenv('DB_SSL_ROOT_CERT')
 
+# Функція для тестування секретів
+def test_secrets():
     # Виведення значень для тестування
     st.write("DB_USERNAME:", DB_USERNAME)
     st.write("DB_PASSWORD:", DB_PASSWORD)
@@ -22,7 +23,7 @@ def test_secrets():
 
     # Тест декодування сертифікату з Base64
     try:
-        ssl_cert_decoded = base64.b64decode(DB_SSL_ROOT_CERT_BASE64)
+        ssl_cert_decoded = base64.b64decode(DB_SSL_ROOT_CERT)
         st.write("SSL Root Certificate decoded successfully!")
         # Виведемо перші 100 символів сертифікату для підтвердження
         st.write(ssl_cert_decoded[:100])
