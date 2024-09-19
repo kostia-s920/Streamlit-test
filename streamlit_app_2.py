@@ -1,22 +1,33 @@
-import streamlit as st
 import matplotlib.pyplot as plt
-import psycopg2
-import pandas as pd
 import re
 import matplotlib.dates as mdates
+import streamlit as st
+import psycopg2
+import pandas as pd
 from datetime import datetime
+import tempfile
+import base64
 
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
+        # Декодуємо сертифікат із Base64
+        ssl_cert_decoded = base64.b64decode(st.secrets["db_ssl_root_cert"])
+
+        # Створюємо тимчасовий файл для зберігання сертифіката
+        with tempfile.NamedTemporaryFile(delete=False) as cert_file:
+            cert_file.write(ssl_cert_decoded)
+            cert_file_path = cert_file.name
+
+        # Підключаємося до бази даних за допомогою секретів
         connection = psycopg2.connect(
-            host="academyocean-bd-academyocean-1.d.aivencloud.com",
-            database="defaultdb",
-            user="avnadmin",
-            password="AVNS_mxvUfMAy4D61hf1zeU1",
-            port="12559",
-            sslmode="require",
-            sslrootcert="/Users/sojik/Desktop/ca.pem"
+            host=st.secrets["db_host"],
+            database=st.secrets["db_name"],
+            user=st.secrets["db_username"],
+            password=st.secrets["db_password"],
+            port=st.secrets["db_port"],
+            sslmode=st.secrets["ssl_mode"],
+            sslrootcert=cert_file_path  # Передаємо шлях до тимчасового файлу з сертифікатом
         )
         return connection
     except Exception as e:
