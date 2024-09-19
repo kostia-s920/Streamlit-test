@@ -53,6 +53,35 @@ def get_page_data(conn, competitor_name, page_url, date):
     return pd.read_sql(query, conn)
 
 
+# Функція для побудови Plotly таблиці для змін у метаданих
+def visualize_metadata_changes(metadata_changes):
+    fig = go.Figure(data=[go.Table(
+        header=dict(values=["Поле", "Було", "Стало"],
+                    fill_color='paleturquoise',
+                    align='left'),
+        cells=dict(values=[metadata_changes['Поле'], metadata_changes['Було'], metadata_changes['Стало']],
+                   fill_color='lavender',
+                   align='left'))
+    ])
+    fig.update_layout(width=800, height=400)
+    st.plotly_chart(fig)
+
+
+# Функція для побудови Plotly таблиці для ключових слів
+def visualize_keywords_changes(keywords_changes):
+    fig = go.Figure(data=[go.Table(
+        header=dict(values=["Ключове слово", "Зміна", "Було", "Стало"],
+                    fill_color='paleturquoise',
+                    align='left'),
+        cells=dict(values=[keywords_changes['Ключове слово'], keywords_changes['Зміна'],
+                           keywords_changes['Було'], keywords_changes['Стало']],
+                   fill_color='lavender',
+                   align='left'))
+    ])
+    fig.update_layout(width=800, height=400)
+    st.plotly_chart(fig)
+
+
 # Функція для порівняння контенту і візуалізації змін за допомогою Plotly
 def visualize_content_changes(content_before, content_after):
     before_lines = content_before.splitlines()
@@ -99,25 +128,13 @@ def compare_keywords(old_keywords, new_keywords):
 
     result = []
     for k, v in added.items():
-        result.append((k, 'Додано', '-', f"{v} разів", 'green'))
+        result.append((k, 'Додано', '-', f"{v} разів"))
     for k, v in removed.items():
-        result.append((k, 'Видалено', f"{v} разів", '-', 'red'))
+        result.append((k, 'Видалено', f"{v} разів", '-'))
     for k, (old_v, new_v) in changed.items():
-        result.append((k, 'Змінено', f"{old_v} разів", f"{new_v} разів", 'yellow'))
+        result.append((k, 'Змінено', f"{old_v} разів", f"{new_v} разів"))
 
-    return pd.DataFrame(result, columns=['Ключове слово', 'Зміна', 'Було', 'Стало', 'Колір'])
-
-
-# Функція для відображення легенди кольорів
-def show_color_legend():
-    st.markdown(
-        """
-        **Пояснення кольорів:**
-        - 🟢 **Додано** — Ключове слово було додано.
-        - 🔴 **Видалено** — Ключове слово було видалено.
-        - 🟡 **Змінено** — Кількість згадувань ключового слова була змінена.
-        """
-    )
+    return pd.DataFrame(result, columns=['Ключове слово', 'Зміна', 'Було', 'Стало'])
 
 
 # Основна функція для інтерфейсу користувача
@@ -163,7 +180,7 @@ def main():
                         if metadata_changes:
                             st.subheader("Зміни в метаданих:")
                             metadata_df = pd.DataFrame(metadata_changes)
-                            st.table(metadata_df)
+                            visualize_metadata_changes(metadata_df)
 
                         # Перевірка на наявність змін у контенті
                         if data1['content'].values[0] != data2['content'].values[0]:
@@ -176,8 +193,7 @@ def main():
                                                                    data2['keywords_found'].values[0])
                             if not keywords_comparison.empty:
                                 st.subheader("Зміни в ключових словах:")
-                                st.table(keywords_comparison.style.applymap(lambda val: f'background-color: {val}',
-                                                                            subset=['Колір']))
+                                visualize_keywords_changes(keywords_comparison)
 
                         # Порівняння keywords_count
                         if data1['keywords_count'].values[0] != data2['keywords_count'].values[0]:
@@ -186,9 +202,6 @@ def main():
                                 'Було': [data1['keywords_count'].values[0]],
                                 'Стало': [data2['keywords_count'].values[0]]
                             }))
-
-                        # Показуємо легенду
-                        show_color_legend()
 
                     else:
                         st.write("Для обраних дат немає даних для порівняння.")
