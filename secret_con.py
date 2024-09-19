@@ -30,3 +30,4 @@ st.write("SSL_MODE:", SSL_MODE)
 # Запустити функцію тестування
 if __name__ == "__main__":
     st.title("Test Streamlit Secrets")
+    test_secrets()
