@@ -25,14 +25,14 @@ def get_competitors(conn):
 
 # Функція для отримання списку URL для обраного конкурента
 def get_pages_for_competitor(conn, competitor_name):
-    query = f"SELECT DISTINCT url FROM {competitor_name}_content"
+    query = f"SELECT DISTINCT url FROM {competitor_name}"
     return pd.read_sql(query, conn)['url'].tolist()
 
 # Функція для отримання дат для сторінки
 def get_dates_for_page(conn, competitor_name, page_url):
     query = f"""
         SELECT DISTINCT date_checked
-        FROM {competitor_name}_content
+        FROM {competitor_name}
         WHERE url = '{page_url}'
         ORDER BY date_checked ASC
     """
@@ -42,7 +42,7 @@ def get_dates_for_page(conn, competitor_name, page_url):
 def get_page_data(conn, competitor_name, page_url, date):
     query = f"""
         SELECT title, h1, description, content, keywords_found, keywords_count
-        FROM {competitor_name}_content
+        FROM {competitor_name}
         WHERE url = '{page_url}' AND date_checked = '{date}'
     """
     return pd.read_sql(query, conn)
