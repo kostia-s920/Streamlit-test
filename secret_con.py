@@ -145,10 +145,11 @@ def main():
                             metadata_df = pd.DataFrame(metadata_changes)
                             st.table(metadata_df)
 
-                        # Порівняння контенту з підсвічуванням
-                        st.subheader("Зміни в контенті:")
-                        content_diff = highlight_changes(data1['content'].values[0], data2['content'].values[0])
-                        components.html(content_diff, height=400, scrolling=True)
+                        # Перевірка на наявність змін у контенті
+                        if data1['content'].values[0] != data2['content'].values[0]:
+                            st.subheader("Зміни в контенті:")
+                            content_diff = highlight_changes(data1['content'].values[0], data2['content'].values[0])
+                            components.html(content_diff, height=400, scrolling=True)
 
                         # Порівняння keywords_found у головній функції
                         if data1['keywords_found'].values[0] and data2['keywords_found'].values[0]:
