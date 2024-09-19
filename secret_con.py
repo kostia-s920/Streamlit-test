@@ -3,7 +3,6 @@ import pandas as pd
 import psycopg2
 import re
 import streamlit.components.v1 as components
-from difflib import HtmlDiff
 
 
 # Функція для підключення до бази даних PostgreSQL
@@ -29,12 +28,23 @@ def get_competitors(conn):
 
 # Функція для отримання списку URL для обраного конкурента
 def get_pages_for_competitor(conn, competitor_name):
-    query = f"SELECT DISTINCT url FROM content_changes WHERE competitor_name = '{competitor_name}'"
+    query = f"SELECT DISTINCT url FROM {competitor_name}_content"
     return pd.read_sql(query, conn)['url'].tolist()
 
 
-# Функція для отримання дат для обраної сторінки та конкурента
-def get_dates_for_page(conn, competitor_name, page_url):
+# Функція для отримання дат для сторінки з основної таблиці конкурента
+def get_dates_from_main_table(conn, competitor_name, page_url):
+    query = f"""
+        SELECT DISTINCT date_checked
+        FROM {competitor_name}_content
+        WHERE url = '{page_url}'
+        ORDER BY date_checked ASC
+    """
+    return pd.read_sql(query, conn)['date_checked'].tolist()
+
+
+# Функція для отримання дат з таблиці змін content_changes
+def get_dates_from_content_changes(conn, competitor_name, page_url):
     query = f"""
         SELECT DISTINCT change_date
         FROM content_changes
@@ -44,65 +54,29 @@ def get_dates_for_page(conn, competitor_name, page_url):
     return pd.read_sql(query, conn)['change_date'].tolist()
 
 
-# Функція для отримання змін для порівняння за обраною сторінкою і датою
-def get_changes(conn, competitor_name, page_url, date):
+# Функція для отримання даних з основної таблиці конкурента на обрану дату
+def get_data_from_main_table(conn, competitor_name, page_url, date):
     query = f"""
-        SELECT field_changed, old_value, new_value, change_date
-        FROM content_changes
-        WHERE competitor_name = '{competitor_name}'
-        AND url = '{page_url}'
-        AND change_date = '{date}'
+        SELECT *
+        FROM {competitor_name}_content
+        WHERE url = '{page_url}' AND date_checked = '{date}'
     """
     return pd.read_sql(query, conn)
 
 
-# Функція для вилучення ключових слів і кількості їх повторень
-def extract_keywords(row):
-    pattern = re.findall(r'([\w\s-]+?)\s*-\s*(\d+)\s*разів', row)
-    keywords_dict = {match[0].strip(): int(match[1]) for match in pattern}
-    return keywords_dict
-
-
-# Функція для застосування стилів до таблиці
-def apply_table_styles():
-    st.markdown(
-        """
-        <style>
-        .styled-table {
-            border-collapse: collapse;
-            margin: 25px 0;
-            font-size: 1.0em;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            min-width: 400px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
-        }
-        .styled-table thead tr {
-            background-color: #009879;
-            color: #ffffff;
-            text-align: left;
-        }
-        .styled-table th,
-        .styled-table td {
-            padding: 12px 15px;
-        }
-        .styled-table tbody tr {
-            border-bottom: 1px solid #dddddd;
-        }
-        .styled-table tbody tr:nth-of-type(even) {
-            background-color: #f3f3f3;
-        }
-        .styled-table tbody tr:last-of-type {
-            border-bottom: 2px solid #009879;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+# Функція для отримання змін з таблиці content_changes
+def get_changes_from_content_changes(conn, competitor_name, page_url, date):
+    query = f"""
+        SELECT *
+        FROM content_changes
+        WHERE competitor_name = '{competitor_name}' AND url = '{page_url}' AND change_date = '{date}'
+    """
+    return pd.read_sql(query, conn)
 
 
 # Основна функція для інтерфейсу користувача
 def main():
-    st.title("Візуалізація змін конкурентів")
+    st.title("Порівняння змін контенту конкурентів")
 
     conn = connect_to_db()
 
@@ -117,68 +91,41 @@ def main():
             selected_page = st.selectbox('Виберіть сторінку', pages)
 
             if selected_page:
-                # Вибір двох дат для порівняння
-                dates = get_dates_for_page(conn, selected_competitor, selected_page)
-                col1, col2 = st.columns(2)
+                # Вибір першої дати з основної таблиці конкурента
+                main_dates = get_dates_from_main_table(conn, selected_competitor, selected_page)
+                selected_main_date = st.selectbox('Виберіть дату з основної таблиці', main_dates)
 
-                with col1:
-                    start_date = st.selectbox('Виберіть дату ДО (before)', dates)
-                with col2:
-                    end_date = st.selectbox('Виберіть дату ПІСЛЯ (after)', dates)
+                # Отримання дат із таблиці content_changes та підсвічування
+                changes_dates = get_dates_from_content_changes(conn, selected_competitor, selected_page)
+                date_colors = ['#cccccc' if date not in changes_dates else '#333333' for date in main_dates]
 
-                if start_date and end_date:
-                    # Отримання змін для двох дат
-                    changes_before = get_changes(conn, selected_competitor, selected_page, start_date)
-                    changes_after = get_changes(conn, selected_competitor, selected_page, end_date)
+                # Показуємо користувачу дати із змінами (підсвічені темним)
+                st.markdown(f"**Доступні дати зі змінами для {selected_page}:**")
+                for i, date in enumerate(main_dates):
+                    color = date_colors[i]
+                    st.markdown(f"<span style='color:{color}'>{date}</span>", unsafe_allow_html=True)
 
-                    if not changes_before.empty and not changes_after.empty:
-                        st.write(f"Порівняння змін для {selected_page} між {start_date} та {end_date}:")
+                # Вибір другої дати з таблиці змін
+                selected_change_date = st.selectbox('Виберіть дату зі змін', changes_dates)
 
-                        # Перевірка поля keywords_count
-                        for index, row_before in changes_before.iterrows():
-                            row_after = changes_after[changes_after['field_changed'] == row_before['field_changed']]
-                            if not row_after.empty:
-                                row_after = row_after.iloc[0]
-                                if row_before['field_changed'] == 'keywords_count':
-                                    apply_table_styles()
-                                    count_table = pd.DataFrame({
-                                        'Було': [row_before['new_value']],
-                                        'Стало': [row_after['new_value']]
-                                    })
-                                    st.markdown(f"<b>Поле змінено: {row_before['field_changed']}</b>",
-                                                unsafe_allow_html=True)
-                                    st.markdown(count_table.to_html(classes='styled-table', index=False),
-                                                unsafe_allow_html=True)
+                if selected_main_date and selected_change_date:
+                    # Отримання даних з основної таблиці конкурента
+                    main_data = get_data_from_main_table(conn, selected_competitor, selected_page, selected_main_date)
 
-                                # Перевірка поля keywords_found
-                                if row_before['field_changed'] == 'keywords_found':
-                                    st.subheader(f"Поле змінено: {row_before['field_changed']}")
-                                    old_keywords = extract_keywords(row_before['new_value'] or '')
-                                    new_keywords = extract_keywords(row_after['new_value'] or '')
+                    # Отримання змін з таблиці content_changes
+                    changes_data = get_changes_from_content_changes(conn, selected_competitor, selected_page,
+                                                                    selected_change_date)
 
-                                    keyword_changes = []
-                                    for keyword in set(old_keywords.keys()).union(set(new_keywords.keys())):
-                                        old_count = old_keywords.get(keyword, 0)
-                                        new_count = new_keywords.get(keyword, 0)
-                                        if old_count != new_count:
-                                            keyword_changes.append({
-                                                'Ключове слово': keyword,
-                                                'Зміна': 'Змінено',
-                                                'Кількість': f'Було: {old_count} разів, Стало: {new_count} разів'
-                                            })
-
-                                    if keyword_changes:
-                                        # Застосовуємо стилі до таблиці
-                                        apply_table_styles()
-
-                                        # Показуємо таблицю з ключовими словами
-                                        df_changes = pd.DataFrame(keyword_changes)
-                                        st.markdown(df_changes.to_html(classes='styled-table', index=False),
-                                                    unsafe_allow_html=True)
-                                    else:
-                                        st.write("Немає змін у ключових словах.")
+                    # Порівняння та виведення результатів
+                    if not main_data.empty and not changes_data.empty:
+                        st.write(
+                            f"Порівняння для сторінки {selected_page} між {selected_main_date} та {selected_change_date}:")
+                        # Тут ти можеш додати логіку для порівняння та підсвічування змін
+                        # Наприклад, використовуючи функції highlight_changes та extract_keywords для ключових слів
+                        st.write(main_data)
+                        st.write(changes_data)
                     else:
-                        st.write(f"Зміни для сторінки {selected_page} відсутні між {start_date} та {end_date}.")
+                        st.write(f"Зміни для сторінки {selected_page} відсутні між обраними датами.")
 
     conn.close()
 
