@@ -142,9 +142,12 @@ def main():
                                 # Якщо поле змінилося у `keywords_found`, використовуємо нову логіку
                                 visualize_keyword_changes(old_value, new_value)
                             else:
-                                html_diff = highlight_changes(old_value, new_value)
-                                # Рендеринг HTML-коду за допомогою Streamlit components
-                                components.html(html_diff, height=400, scrolling=True)
+                                if old_value.strip() and new_value.strip():  # Перевірка, щоб значення не були порожніми
+                                    html_diff = highlight_changes(old_value, new_value)
+                                    # Рендеринг HTML-коду за допомогою Streamlit components
+                                    components.html(html_diff, height=400, scrolling=True)
+                                else:
+                                    st.write("Немає змін у контенті.")
 
                     else:
                         st.write("Немає змін для обраної сторінки та дати.")
