@@ -246,46 +246,48 @@ def main():
         with st.expander("Візуалізація змін контенту", expanded=False):
             st.subheader('Візуалізація змін контенту для конкурентів')
             competitor = st.selectbox("Виберіть конкурента",
-                                      ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com','academyocean_com'],
+                                      ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com',
+                                       'academyocean_com'],
                                       key="content_competitor_selectbox")
 
+            # Перевіряємо, чи вибраний чекбокс
             view_all = st.checkbox("Показати всі зміни конкурента", key="content_view_all_checkbox")
 
+            # Якщо вибрано чекбокс, показуємо всі зміни конкурента
             if view_all:
                 query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}'"
                 df = pd.read_sql(query, conn)
 
                 if not df.empty:
-                    # Додаємо selectbox для вибору року після вибору сторінки
+                    # Додаємо selectbox для вибору року
                     selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
-
                     st.subheader(f"Загальні зміни для {competitor} у {selected_year} році")
                     render_contribution_chart_by_months(df, selected_year)
                 else:
                     st.write("Немає змін для цього конкурента.")
             else:
+                # Якщо чекбокс не вибраний, показуємо лише список сторінок
                 page_query = f"SELECT DISTINCT url FROM content_changes WHERE competitor_name = '{competitor}'"
                 pages = pd.read_sql(page_query, conn)['url'].tolist()
 
                 if not pages:
                     st.write("Немає доступних сторінок для цього конкурента.")
-                    return
-
-                page = st.selectbox("Виберіть сторінку", pages, key="content_page_selectbox")
-
-                query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}' AND url = '{page}'"
-                df = pd.read_sql(query, conn)
-
-                if not df.empty:
-                    # Додаємо selectbox для вибору року після вибору сторінки
-                    selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
-
-                    st.markdown(f"<p style='font-size:12px;color:gray;'>Зміни для сторінки: {page} у {selected_year} році</p>",
-                                unsafe_allow_html=True)
-                    render_contribution_chart_by_months(df, selected_year)
                 else:
-                    st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
-                                unsafe_allow_html=True)
+                    page = st.selectbox("Виберіть сторінку", pages, key="content_page_selectbox")
+
+                    query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}' AND url = '{page}'"
+                    df = pd.read_sql(query, conn)
+
+                    if not df.empty:
+                        # Додаємо selectbox для вибору року після вибору сторінки
+                        selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
+                        st.markdown(
+                            f"<p style='font-size:12px;color:gray;'>Зміни для сторінки: {page} у {selected_year} році</p>",
+                            unsafe_allow_html=True)
+                        render_contribution_chart_by_months(df, selected_year)
+                    else:
+                        st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
+                                    unsafe_allow_html=True)
 
         st.markdown("<hr>", unsafe_allow_html=True)
 
