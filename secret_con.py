@@ -22,7 +22,9 @@ def connect_to_db():
         st.error(f"Error connecting to database: {e}")
         return None
 
-# Функція для отримання списку конкурентів
+
+
+#Функція для отримання списку конкурентів
 def get_competitors(conn):
     query = "SELECT DISTINCT competitor_name FROM content_changes"
     return pd.read_sql(query, conn)['competitor_name'].tolist()
@@ -357,256 +359,273 @@ def render_contribution_chart_by_months(change_dates, selected_year, conn, compe
     # Викликаємо рендеринг місяців
     st.markdown(render_month_labels(), unsafe_allow_html=True)
 
+
 # Основна функція для відображення даних у Streamlit
 def main():
     # Підключаємося до бази даних
     conn = connect_to_db()
 
     if conn:
-        st.title("Аналіз Конкурентів")
+        # Додаємо бічну панель для навігації між сторінками
+        st.sidebar.title("Навігація")
 
-        # Візуалізація змін контенту
-        with st.expander("Візуалізація змін контенту", expanded=False):
-            st.subheader('Візуалізація змін контенту для конкурентів')
-            competitor = st.selectbox("Виберіть конкурента",
-                                      ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com',
-                                       'academyocean_com'],
-                                      key="content_competitor_selectbox")
+        # Отримуємо список конкурентів
+        competitors = get_competitors(conn)
 
-            # Перевіряємо, чи вибраний чекбокс
-            view_all = st.checkbox("Показати всі зміни конкурента", key="content_view_all_checkbox")
+        # Список сторінок
+        pages = ["Візуалізація змін контенту",
+                 "Загальна кількість ключових слів",
+                 "Порівняння ключових слів між конкурентами",
+                 "Контент сторінки з підсвіченими ключовими словами",
+                 "Порівняння контенту"]
 
-            if view_all:
-                # Показуємо всі зміни конкурента
-                query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}'"
-                df = pd.read_sql(query, conn)
+        # Вибір сторінки через кнопки на бічній панелі
+        page_selection = st.sidebar.radio("Оберіть сторінку", pages)
 
-                if not df.empty:
-                    selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
-                    st.subheader(f"Загальні зміни для {competitor} у {selected_year} році")
-                    render_contribution_chart_by_months(df, selected_year, conn, competitor)
-                else:
-                    st.write("Немає змін для цього конкурента.")
-            else:
-                # Якщо не вибрано "Показати всі зміни конкурента", вибираємо сторінку
-                page_query = f"SELECT DISTINCT url FROM content_changes WHERE competitor_name = '{competitor}'"
-                pages = pd.read_sql(page_query, conn)['url'].tolist()
+        # Відображення контенту в залежності від вибору сторінки
+        if page_selection == "Візуалізація змін контенту":
+            render_content_change_visualization(conn)
+        elif page_selection == "Загальна кількість ключових слів":
+            render_keyword_count(conn)
+        elif page_selection == "Порівняння ключових слів між конкурентами":
+            render_keyword_comparison(conn, competitors)
+        elif page_selection == "Контент сторінки з підсвіченими ключовими словами":
+            render_page_content_with_keywords(conn, competitors)
+        elif page_selection == "Порівняння контенту":
+            render_content_comparison(conn)
 
-                if not pages:
-                    st.write("Немає доступних сторінок для цього конкурента.")
-                else:
-                    selected_page = st.selectbox("Виберіть сторінку", pages, key="content_page_selectbox")
 
-                    # Показуємо зміни для вибраної сторінки
-                    query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}' AND url = '{selected_page}'"
-                    df = pd.read_sql(query, conn)
+# Функції для кожної сторінки
+def render_content_change_visualization(conn):
+    st.title("Візуалізація змін контенту")
+    st.subheader('Візуалізація змін контенту для конкурентів')
 
-                    if not df.empty:
-                        selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
-                        render_contribution_chart_by_months(df, selected_year, conn, competitor, selected_page)
-                    else:
-                        st.write("Немає змін для цієї сторінки.")
+    # Отримуємо список конкурентів
+    competitors = get_competitors(conn)
 
-        st.markdown("<hr>", unsafe_allow_html=True)
+    competitor = st.selectbox("Виберіть конкурента", competitors, key="content_competitor_selectbox")
 
-        # Keyword Count and Historical Analysis
-        with st.expander("Загальна кількість ключових слів", expanded=False):
-            st.subheader('Аналіз Загальної кількості ключових слів конкурента')
+    # Перевіряємо, чи вибраний чекбокс
+    view_all = st.checkbox("Показати всі зміни конкурента", key="content_view_all_checkbox")
 
-            competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com', 'academyocean_com']
-            competitor_name = st.selectbox("Виберіть конкурента", competitors, key="keyword_competitor_selectbox")
-            df = get_keyword_data(conn, competitor_name)
+    if view_all:
+        # Показуємо всі зміни конкурента
+        query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}'"
+        df = pd.read_sql(query, conn)
+
+        if not df.empty:
+            selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
+            st.subheader(f"Загальні зміни для {competitor} у {selected_year} році")
+            render_contribution_chart_by_months(df, selected_year, conn, competitor)
+        else:
+            st.write("Немає змін для цього конкурента.")
+    else:
+        # Якщо не вибрано "Показати всі зміни конкурента", вибираємо сторінку
+        page_query = f"SELECT DISTINCT url FROM content_changes WHERE competitor_name = '{competitor}'"
+        pages = pd.read_sql(page_query, conn)['url'].tolist()
+
+        if not pages:
+            st.write("Немає доступних сторінок для цього конкурента.")
+        else:
+            selected_page = st.selectbox("Виберіть сторінку", pages, key="content_page_selectbox")
+
+            # Показуємо зміни для вибраної сторінки
+            query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}' AND url = '{selected_page}'"
+            df = pd.read_sql(query, conn)
 
             if not df.empty:
-                selected_urls = st.multiselect('Виберіть URL', df['url'].unique(), max_selections=5,
-                                               key="keyword_url_multiselect")
-
-                # Фільтр по датах
-                start_date = pd.to_datetime(
-                    st.date_input('Початкова дата', df['date_checked'].min(), key="keyword_start_date")).date()
-                end_date = pd.to_datetime(
-                    st.date_input('Кінцева дата', df['date_checked'].max(), key="keyword_end_date")).date()
-                df['date_checked'] = pd.to_datetime(df['date_checked']).dt.date
-                df = df[(df['date_checked'] >= start_date) & (df['date_checked'] <= end_date)]
-
-                if selected_urls:
-                    df = df[df['url'].isin(selected_urls)]
-
-                    st.subheader(f'Тренд кількості ключових слів для {competitor_name}')
-                    plot_keyword_trend(df, competitor_name)
-
-                    selected_url_for_keywords = st.selectbox('Виберіть URL для перегляду знайдених ключових слів',
-                                                             df['url'].unique(), key="keyword_url_selectbox")
-
-                    if selected_url_for_keywords:
-                        selected_page_data = df[df['url'] == selected_url_for_keywords].iloc[0]
-                        if selected_page_data['keywords_found'] and isinstance(selected_page_data['keywords_found'],
-                                                                               str):
-                            keywords_dict = extract_keywords(selected_page_data['keywords_found'])
-
-                            st.write(f"Знайдені ключові слова на {selected_url_for_keywords}:")
-                            st.write(keywords_dict)
-
-                            selected_keywords = st.multiselect('Виберіть ключові слова для аналізу історії',
-                                                               list(keywords_dict.keys()),
-                                                               key="keyword_select_multiselect")
-
-                            if selected_keywords:
-                                chart_type = st.selectbox("Тип графіка",
-                                                          ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart',
-                                                           'Step Chart'], key="keyword_chart_type_selectbox")
-                                for keyword in selected_keywords:
-                                    st.subheader(f'Історія для ключового слова: {keyword}')
-                                    keyword_history_df = get_keyword_history(conn, competitor_name, keyword)
-                                    if not keyword_history_df.empty:
-                                        plot_keyword_history(keyword_history_df, keyword, selected_url_for_keywords,
-                                                             chart_type)
-                                    else:
-                                        st.write(f"Немає даних для ключового слова: {keyword}")
-
-        st.markdown("<hr>", unsafe_allow_html=True)
-
-        # Порівняння конкурентів
-        with st.expander("Порівняння ключових слів між конкурентами", expanded=False):
-            st.subheader('Порівняння ключових слів між конкурентами')
-            selected_competitors = st.multiselect("Виберіть конкурентів для порівняння", competitors,
-                                                  default=competitors[:2], key="comparison_competitors_multiselect")
-            df_list = [get_keyword_data(conn, competitor) for competitor in selected_competitors]
-
-            selected_urls_for_comparison = []
-            for competitor, df in zip(selected_competitors, df_list):
-                selected_url = st.selectbox(f'Виберіть URL для {competitor}', df['url'].unique(),
-                                            key=f"comparison_url_selectbox_{competitor}")
-                selected_urls_for_comparison.append(selected_url)
-
-            if len(selected_urls_for_comparison) == len(selected_competitors):
-                plot_comparison(df_list, selected_competitors, selected_urls_for_comparison)
-
-        st.markdown("<hr>", unsafe_allow_html=True)
-
-        # Контент сторінки
-        with st.expander("Контент сторінки з підсвіченими ключовими словами", expanded=False):
-            st.subheader('Контент сторінки з підсвіченими ключовими словами')
-            competitor_name_content = st.selectbox("Виберіть конкурента для перегляду контенту", competitors,
-                                                   key="content_competitor_selectbox_2")
-            df_content = get_keyword_data(conn, competitor_name_content)
-
-            if not df_content.empty:
-                selected_url_for_content = st.selectbox('Виберіть URL для перегляду контенту',
-                                                        df_content['url'].unique(), key="content_url_selectbox_2")
-                selected_date_for_content = st.selectbox('Виберіть дату',
-                                                         df_content[df_content['url'] == selected_url_for_content][
-                                                             'date_checked'].dt.date.unique(),
-                                                         key="content_date_selectbox")
-
-                if selected_date_for_content:
-                    page_content_data = df_content[(df_content['url'] == selected_url_for_content) & (
-                                df_content['date_checked'].dt.date == selected_date_for_content)]
-                    page_content = page_content_data['content'].values[0]
-                    keywords_found = page_content_data['keywords_found'].values[0]
-                    keywords_dict = extract_keywords(keywords_found)
-                    highlighted_content = highlight_keywords(page_content, list(keywords_dict.keys()))
-
-                    st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
-                                unsafe_allow_html=True)
-
-        st.markdown("<hr>", unsafe_allow_html=True)
-
-        # Порівняння контенту
-        with st.expander("Порівняння контенту", expanded=False):
-            st.subheader('Порівняння контенту')
-
-            # Отримуємо список конкурентів
-            competitors = get_competitors(conn)
-            selected_competitor = st.selectbox('Виберіть конкурента', competitors)
-
-            if selected_competitor:
-                # Вибір сторінки для конкурента
-                pages = get_pages_for_competitor(conn, selected_competitor)
-                selected_page = st.selectbox('Виберіть сторінку', pages)
-
-                if selected_page:
-                    # Вибір двох дат для порівняння
-                    dates = get_dates_for_page(conn, selected_competitor, selected_page)
-
-                    if dates:
-                        # Перетворення дат в формат datetime для віджета
-                        formatted_dates = [pd.to_datetime(date).date() for date in dates]
-
-                        # Вибір дат через календар
-                        selected_date1 = st.date_input('Виберіть першу дату', min_value=min(formatted_dates),
-                                                       max_value=max(formatted_dates),
-                                                       value=min(formatted_dates),
-                                                       key="date1")
-                        selected_date2 = st.date_input('Виберіть другу дату', min_value=min(formatted_dates),
-                                                       max_value=max(formatted_dates),
-                                                       value=max(formatted_dates),
-                                                       key="date2")
-
-                        # Перевіряємо, чи вибрано дві різні дати
-                        if selected_date1 and selected_date2 and selected_date1 != selected_date2:
-                            # Перетворення обраних дат у строки для SQL-запиту
-                            date1_str = pd.to_datetime(
-                                [date for date in dates if pd.to_datetime(date).date() == selected_date1][0])
-                            date2_str = pd.to_datetime(
-                                [date for date in dates if pd.to_datetime(date).date() == selected_date2][0])
-
-                            # Отримуємо дані для обраних дат
-                            data1 = get_page_data(conn, selected_competitor, selected_page, date1_str)
-                            data2 = get_page_data(conn, selected_competitor, selected_page, date2_str)
-
-                            if not data1.empty and not data2.empty:
+                selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
+                render_contribution_chart_by_months(df, selected_year, conn, competitor, selected_page)
+            else:
+                st.write("Немає змін для цієї сторінки.")
 
 
-                                # Порівняння метаданих (Title, H1, Description)
-                                metadata_changes = [
-                                    {'Поле': col, 'Було': data1[col].values[0], 'Стало': data2[col].values[0]}
-                                    for col in ['title', 'h1', 'description'] if
-                                    data1[col].values[0] != data2[col].values[0]
-                                ]
+def render_keyword_count(conn):
+    st.title("Загальна кількість ключових слів")
+    competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com', 'academyocean_com']
+    competitor_name = st.selectbox("Виберіть конкурента", competitors, key="keyword_competitor_selectbox")
+    df = get_keyword_data(conn, competitor_name)
 
-                                if metadata_changes:
-                                    st.subheader("Зміни в метаданих:")
-                                    metadata_df = pd.DataFrame(metadata_changes)
-                                    visualize_metadata_changes(metadata_df)
-                                else:
-                                    st.write("Змін у метаданих не знайдено.")
+    if not df.empty:
+        selected_urls = st.multiselect('Виберіть URL', df['url'].unique(), max_selections=5,
+                                       key="keyword_url_multiselect")
 
-                                # Перевірка на наявність змін у контенті
-                                if data1['content'].values[0] != data2['content'].values[0]:
-                                    st.subheader("Зміни в контенті:")
-                                    visualize_content_changes(data1['content'].values[0], data2['content'].values[0])
-                                else:
-                                    st.write("Змін у контенті не знайдено.")
+        # Фільтр по датах
+        start_date = pd.to_datetime(
+            st.date_input('Початкова дата', df['date_checked'].min(), key="keyword_start_date")).date()
+        end_date = pd.to_datetime(
+            st.date_input('Кінцева дата', df['date_checked'].max(), key="keyword_end_date")).date()
+        df['date_checked'] = pd.to_datetime(df['date_checked']).dt.date
+        df = df[(df['date_checked'] >= start_date) & (df['date_checked'] <= end_date)]
 
-                                # Порівняння ключових слів
-                                if data1['keywords_found'].values[0] and data2['keywords_found'].values[0]:
-                                    keywords_comparison = compare_keywords(data1['keywords_found'].values[0],
-                                                                           data2['keywords_found'].values[0])
-                                    if not keywords_comparison.empty:
-                                        st.subheader("Зміни в ключових словах:")
-                                        visualize_keywords_changes(keywords_comparison)
-                                    else:
-                                        st.write("Змін у ключових словах не знайдено.")
+        if selected_urls:
+            df = df[df['url'].isin(selected_urls)]
 
-                                # Порівняння кількості ключових слів
-                                if data1['keywords_count'].values[0] != data2['keywords_count'].values[0]:
-                                    st.subheader("Зміни в кількості ключових слів:")
-                                    st.table(pd.DataFrame({
-                                        'Було': [data1['keywords_count'].values[0]],
-                                        'Стало': [data2['keywords_count'].values[0]]
-                                    }))
-                                else:
-                                    st.write("Змін у кількості ключових слів не знайдено.")
+            st.subheader(f'Тренд кількості ключових слів для {competitor_name}')
+            plot_keyword_trend(df, competitor_name)
+
+            selected_url_for_keywords = st.selectbox('Виберіть URL для перегляду знайдених ключових слів',
+                                                     df['url'].unique(), key="keyword_url_selectbox")
+
+            if selected_url_for_keywords:
+                selected_page_data = df[df['url'] == selected_url_for_keywords].iloc[0]
+                if selected_page_data['keywords_found'] and isinstance(selected_page_data['keywords_found'],
+                                                                       str):
+                    keywords_dict = extract_keywords(selected_page_data['keywords_found'])
+
+                    st.write(f"Знайдені ключові слова на {selected_url_for_keywords}:")
+                    st.write(keywords_dict)
+
+                    selected_keywords = st.multiselect('Виберіть ключові слова для аналізу історії',
+                                                       list(keywords_dict.keys()),
+                                                       key="keyword_select_multiselect")
+
+                    if selected_keywords:
+                        chart_type = st.selectbox("Тип графіка",
+                                                  ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart',
+                                                   'Step Chart'], key="keyword_chart_type_selectbox")
+                        for keyword in selected_keywords:
+                            st.subheader(f'Історія для ключового слова: {keyword}')
+                            keyword_history_df = get_keyword_history(conn, competitor_name, keyword)
+                            if not keyword_history_df.empty:
+                                plot_keyword_history(keyword_history_df, keyword, selected_url_for_keywords,
+                                                     chart_type)
                             else:
-                                st.write("Для обраних дат немає даних для порівняння.")
+                                st.write(f"Немає даних для ключового слова: {keyword}")
+
+
+def render_keyword_comparison(conn, competitors):
+    st.title("Порівняння ключових слів між конкурентами")
+    selected_competitors = st.multiselect("Виберіть конкурентів для порівняння", competitors,
+                                          default=competitors[:2], key="comparison_competitors_multiselect")
+    df_list = [get_keyword_data(conn, competitor) for competitor in selected_competitors]
+
+    selected_urls_for_comparison = []
+    for competitor, df in zip(selected_competitors, df_list):
+        selected_url = st.selectbox(f'Виберіть URL для {competitor}', df['url'].unique(),
+                                    key=f"comparison_url_selectbox_{competitor}")
+        selected_urls_for_comparison.append(selected_url)
+
+    if len(selected_urls_for_comparison) == len(selected_competitors):
+        plot_comparison(df_list, selected_competitors, selected_urls_for_comparison)
+
+
+def render_page_content_with_keywords(conn, competitors):
+    st.title("Контент сторінки з підсвіченими ключовими словами")
+    competitor_name_content = st.selectbox("Виберіть конкурента для перегляду контенту", competitors,
+                                           key="content_competitor_selectbox_2")
+    df_content = get_keyword_data(conn, competitor_name_content)
+
+    if not df_content.empty:
+        selected_url_for_content = st.selectbox('Виберіть URL для перегляду контенту',
+                                                df_content['url'].unique(), key="content_url_selectbox_2")
+        selected_date_for_content = st.selectbox('Виберіть дату',
+                                                 df_content[df_content['url'] == selected_url_for_content][
+                                                     'date_checked'].dt.date.unique(),
+                                                 key="content_date_selectbox")
+
+        if selected_date_for_content:
+            page_content_data = df_content[(df_content['url'] == selected_url_for_content) & (
+                    df_content['date_checked'].dt.date == selected_date_for_content)]
+            page_content = page_content_data['content'].values[0]
+            keywords_found = page_content_data['keywords_found'].values[0]
+            keywords_dict = extract_keywords(keywords_found)
+            highlighted_content = highlight_keywords(page_content, list(keywords_dict.keys()))
+
+            st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
+                        unsafe_allow_html=True)
+
+
+def render_content_comparison(conn):
+    st.title("Порівняння контенту")
+    # Отримуємо список конкурентів
+    competitors = get_competitors(conn)
+    selected_competitor = st.selectbox('Виберіть конкурента', competitors)
+
+    if selected_competitor:
+        # Вибір сторінки для конкурента
+        pages = get_pages_for_competitor(conn, selected_competitor)
+        selected_page = st.selectbox('Виберіть сторінку', pages)
+
+        if selected_page:
+            # Вибір двох дат для порівняння
+            dates = get_dates_for_page(conn, selected_competitor, selected_page)
+
+            if dates:
+                # Перетворення дат в формат datetime для віджета
+                formatted_dates = [pd.to_datetime(date).date() for date in dates]
+
+                # Вибір дат через календар
+                selected_date1 = st.date_input('Виберіть першу дату', min_value=min(formatted_dates),
+                                               max_value=max(formatted_dates),
+                                               value=min(formatted_dates),
+                                               key="date1")
+                selected_date2 = st.date_input('Виберіть другу дату', min_value=min(formatted_dates),
+                                               max_value=max(formatted_dates),
+                                               value=max(formatted_dates),
+                                               key="date2")
+
+                # Перевіряємо, чи вибрано дві різні дати
+                if selected_date1 and selected_date2 and selected_date1 != selected_date2:
+                    # Перетворення обраних дат у строки для SQL-запиту
+                    date1_str = pd.to_datetime(
+                        [date for date in dates if pd.to_datetime(date).date() == selected_date1][0])
+                    date2_str = pd.to_datetime(
+                        [date for date in dates if pd.to_datetime(date).date() == selected_date2][0])
+
+                    # Отримуємо дані для обраних дат
+                    data1 = get_page_data(conn, selected_competitor, selected_page, date1_str)
+                    data2 = get_page_data(conn, selected_competitor, selected_page, date2_str)
+
+                    if not data1.empty and not data2.empty:
+
+                        # Порівняння метаданих (Title, H1, Description)
+                        metadata_changes = [
+                            {'Поле': col, 'Було': data1[col].values[0], 'Стало': data2[col].values[0]}
+                            for col in ['title', 'h1', 'description'] if
+                            data1[col].values[0] != data2[col].values[0]
+                        ]
+
+                        if metadata_changes:
+                            st.subheader("Зміни в метаданих:")
+                            metadata_df = pd.DataFrame(metadata_changes)
+                            visualize_metadata_changes(metadata_df)
                         else:
-                            st.warning("Оберіть дві різні дати для порівняння.")
+                            st.write("Змін у метаданих не знайдено.")
+
+                        # Перевірка на наявність змін у контенті
+                        if data1['content'].values[0] != data2['content'].values[0]:
+                            st.subheader("Зміни в контенті:")
+                            visualize_content_changes(data1['content'].values[0], data2['content'].values[0])
+                        else:
+                            st.write("Змін у контенті не знайдено.")
+
+                        # Порівняння ключових слів
+                        if data1['keywords_found'].values[0] and data2['keywords_found'].values[0]:
+                            keywords_comparison = compare_keywords(data1['keywords_found'].values[0],
+                                                                   data2['keywords_found'].values[0])
+                            if not keywords_comparison.empty:
+                                st.subheader("Зміни в ключових словах:")
+                                visualize_keywords_changes(keywords_comparison)
+                            else:
+                                st.write("Змін у ключових словах не знайдено.")
+
+                        # Порівняння кількості ключових слів
+                        if data1['keywords_count'].values[0] != data2['keywords_count'].values[0]:
+                            st.subheader("Зміни в кількості ключових слів:")
+                            st.table(pd.DataFrame({
+                                'Було': [data1['keywords_count'].values[0]],
+                                'Стало': [data2['keywords_count'].values[0]]
+                            }))
+                        else:
+                            st.write("Змін у кількості ключових слів не знайдено.")
                     else:
-                        st.write("Немає доступних дат для цієї сторінки.")
+                        st.write("Для обраних дат немає даних для порівняння.")
+                else:
+                    st.warning("Оберіть дві різні дати для порівняння.")
+            else:
+                st.write("Немає доступних дат для цієї сторінки.")
 
 
 if __name__ == "__main__":
     main()
-
-
