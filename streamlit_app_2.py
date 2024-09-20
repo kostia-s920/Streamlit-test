@@ -1,3 +1,6 @@
+import tempfile
+import base64
+import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import re
 import matplotlib.dates as mdates
@@ -5,8 +8,6 @@ import streamlit as st
 import psycopg2
 import pandas as pd
 from datetime import datetime
-import tempfile
-import base64
 
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
@@ -34,6 +35,123 @@ def connect_to_db():
         st.error(f"Error connecting to database: {e}")
         return None
 
+#Функція для отримання списку конкурентів
+def get_competitors(conn):
+    query = "SELECT DISTINCT competitor_name FROM content_changes"
+    return pd.read_sql(query, conn)['competitor_name'].tolist()
+
+
+# Функція для отримання списку URL для обраного конкурента
+def get_pages_for_competitor(conn, competitor_name):
+    query = f"SELECT DISTINCT url FROM {competitor_name}"
+    return pd.read_sql(query, conn)['url'].tolist()
+
+
+# Функція для отримання дат для сторінки
+def get_dates_for_page(conn, competitor_name, page_url):
+    query = f"""
+        SELECT DISTINCT date_checked
+        FROM {competitor_name}
+        WHERE url = '{page_url}'
+        ORDER BY date_checked ASC
+    """
+    return pd.read_sql(query, conn)['date_checked'].tolist()
+
+
+# Функція для отримання даних для конкретної сторінки на обрану дату
+def get_page_data(conn, competitor_name, page_url, date):
+    query = f"""
+        SELECT title, h1, description, content, keywords_found, keywords_count
+        FROM {competitor_name}
+        WHERE url = '{page_url}' AND date_checked = '{date}'
+    """
+    return pd.read_sql(query, conn)
+
+
+# Функція для побудови Plotly таблиці для змін у метаданих
+def visualize_metadata_changes(metadata_changes):
+    fig = go.Figure(data=[go.Table(
+        header=dict(values=["Поле", "Було", "Стало"],
+                    fill_color='paleturquoise',
+                    align='left'),
+        cells=dict(values=[metadata_changes['Поле'], metadata_changes['Було'], metadata_changes['Стало']],
+                   fill_color='lavender',
+                   align='left'))
+    ])
+    fig.update_layout(width=800, height=400)
+    st.plotly_chart(fig)
+
+
+# Функція для побудови Plotly таблиці для ключових слів
+def visualize_keywords_changes(keywords_changes):
+    fig = go.Figure(data=[go.Table(
+        header=dict(values=["Ключове слово", "Зміна", "Було", "Стало"],
+                    fill_color='paleturquoise',
+                    align='left'),
+        cells=dict(values=[keywords_changes['Ключове слово'], keywords_changes['Зміна'],
+                           keywords_changes['Було'], keywords_changes['Стало']],
+                   fill_color='lavender',
+                   align='left'))
+    ])
+    fig.update_layout(width=800, height=400)
+    st.plotly_chart(fig)
+
+
+# Функція для порівняння контенту і візуалізації змін за допомогою Plotly
+def visualize_content_changes(content_before, content_after):
+    before_lines = content_before.splitlines()
+    after_lines = content_after.splitlines()
+
+    # Визначаємо кольори для кожного рядка
+    line_colors = []
+    for old_line, new_line in zip(before_lines, after_lines):
+        if old_line == new_line:
+            line_colors.append('white')  # Немає змін
+        else:
+            line_colors.append('yellow')  # Зміна у рядку
+
+    # Створюємо таблицю Plotly
+    fig = go.Figure(data=[go.Table(
+        header=dict(values=["Рядок до", "Рядок після"],
+                    fill_color='paleturquoise',
+                    align='left'),
+        cells=dict(values=[before_lines, after_lines],
+                   fill_color=[['white'] * len(before_lines), line_colors],
+                   align='left'))
+    ])
+
+    fig.update_layout(width=800, height=400)
+    st.plotly_chart(fig)
+
+
+# Функція для вилучення ключових слів і кількості їх повторень
+def extract_keywords(row):
+    pattern = re.findall(r'([\w\s-]+?)\s*-\s*(\d+)\s*разів', row)
+    keywords_dict = {match[0].strip(): int(match[1]) for match in pattern}
+    return keywords_dict
+
+
+# Функція для порівняння keywords_found
+def compare_keywords(old_keywords, new_keywords):
+    old_dict = extract_keywords(old_keywords)
+    new_dict = extract_keywords(new_keywords)
+
+    # Визначаємо додані, видалені і змінені ключові слова
+    added = {k: new_dict[k] for k in new_dict if k not in old_dict}
+    removed = {k: old_dict[k] for k in old_dict if k not in new_dict}
+    changed = {k: (old_dict[k], new_dict[k]) for k in old_dict if k in new_dict and old_dict[k] != new_dict[k]}
+
+    result = []
+    for k, v in added.items():
+        result.append((k, 'Додано', '-', f"{v} разів"))
+    for k, v in removed.items():
+        result.append((k, 'Видалено', f"{v} разів", '-'))
+    for k, (old_v, new_v) in changed.items():
+        result.append((k, 'Змінено', f"{old_v} разів", f"{new_v} разів"))
+
+    return pd.DataFrame(result, columns=['Ключове слово', 'Зміна', 'Було', 'Стало'])
+
+
 # Функція для отримання даних по ключовим словам із бази даних
 def get_keyword_data(conn, competitor_name):
     query = f"""
@@ -43,12 +161,6 @@ def get_keyword_data(conn, competitor_name):
     """
     df = pd.read_sql(query, conn)
     return df
-
-# Функція для вилучення ключових слів і кількості їх повторень, ігноруючи значення в дужках
-def extract_keywords(row):
-    pattern = re.findall(r'([\w\s-]+?)\s*-\s*(\d+)\s*разів', row)
-    keywords_dict = {match[0].strip(): int(match[1]) for match in pattern}
-    return keywords_dict
 
 # Функція для отримання історичних даних по вибраному ключовому слову
 def get_keyword_history(conn, competitor_name, keyword):
@@ -147,9 +259,8 @@ def highlight_keywords(text, keywords):
         text = re.sub(f'({escaped_keyword})', r'<span style="color:red; font-weight:bold;">\1</span>', text, flags=re.IGNORECASE)
     return text
 
-
 # Функція для рендерингу сітки змін за місяцями
-def render_contribution_chart_by_months(change_dates, selected_year):
+def render_contribution_chart_by_months(change_dates, selected_year, conn, competitor, selected_page=None):
     st.markdown(
         """
         <style>
@@ -192,7 +303,6 @@ def render_contribution_chart_by_months(change_dates, selected_year):
     # Фільтруємо дати за обраним роком
     change_dates['change_date'] = pd.to_datetime(change_dates['change_date']).dt.date
     change_dates = change_dates[change_dates['change_date'].apply(lambda x: x.year) == selected_year]
-    changes_by_date = change_dates.groupby('change_date').size()  # Групуємо зміни за датою
 
     def render_month_labels():
         months = {
@@ -208,20 +318,48 @@ def render_contribution_chart_by_months(change_dates, selected_year):
 
             for day in range(1, days + 1):
                 date = datetime(selected_year, list(months.keys()).index(month) + 1, day).date()
-                count = changes_by_date.get(date, 0)
 
-                if count == 0:
-                    level = 'contribution-box'
-                elif count <= 1:
-                    level = 'contribution-box contribution-level-1'
-                elif count <= 3:
-                    level = 'contribution-box contribution-level-2'
-                elif count <= 5:
-                    level = 'contribution-box contribution-level-3'
+                # Змінюємо запит в залежності від того, вибрано конкретну сторінку чи всі зміни конкурента
+                if selected_page:
+                    query = f"""
+                    SELECT change_date 
+                    FROM content_changes 
+                    WHERE competitor_name = '{competitor}'
+                    AND url = '{selected_page}'
+                    AND change_date::date = '{date}'
+                    """
+                    result = pd.read_sql(query, conn)
+                    pages = result['change_date'].tolist() if not result.empty else []
                 else:
-                    level = 'contribution-box contribution-level-4'
+                    query = f"""
+                    SELECT url 
+                    FROM content_changes 
+                    WHERE competitor_name = '{competitor}'
+                    AND change_date::date = '{date}'
+                    """
+                    pages = pd.read_sql(query, conn)['url'].tolist()
 
-                month_html += f'<div class="{level}" title="{date} - {count} changes"></div>'
+                # Визначаємо рівень для відображення кольору
+                if not pages:
+                    level = 'contribution-box'
+                    tooltip = f"{date} - немає змін"
+                else:
+                    if len(pages) <= 1:
+                        level = 'contribution-box contribution-level-1'
+                    elif len(pages) <= 3:
+                        level = 'contribution-box contribution-level-2'
+                    elif len(pages) <= 5:
+                        level = 'contribution-box contribution-level-3'
+                    else:
+                        level = 'contribution-box contribution-level-4'
+
+                    # Формуємо список сторінок для відображення в спливаючому вікні
+                    if selected_page:
+                        tooltip = f"{date} - зміни на цій сторінці"
+                    else:
+                        tooltip = f"{date} - зміни:\n" + "\n".join(pages)
+
+                month_html += f'<div class="{level}" title="{tooltip}"></div>'
 
             month_html += '</div>'
             months_html += f'{month_html}</div>'
@@ -231,8 +369,6 @@ def render_contribution_chart_by_months(change_dates, selected_year):
 
     # Викликаємо рендеринг місяців
     st.markdown(render_month_labels(), unsafe_allow_html=True)
-
-
 
 # Основна функція для відображення даних у Streamlit
 def main():
@@ -253,41 +389,36 @@ def main():
             # Перевіряємо, чи вибраний чекбокс
             view_all = st.checkbox("Показати всі зміни конкурента", key="content_view_all_checkbox")
 
-            # Якщо вибрано чекбокс, показуємо всі зміни конкурента
             if view_all:
+                # Показуємо всі зміни конкурента
                 query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}'"
                 df = pd.read_sql(query, conn)
 
                 if not df.empty:
-                    # Додаємо selectbox для вибору року
                     selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
                     st.subheader(f"Загальні зміни для {competitor} у {selected_year} році")
-                    render_contribution_chart_by_months(df, selected_year)
+                    render_contribution_chart_by_months(df, selected_year, conn, competitor)
                 else:
                     st.write("Немає змін для цього конкурента.")
             else:
-                # Якщо чекбокс не вибраний, показуємо лише список сторінок
+                # Якщо не вибрано "Показати всі зміни конкурента", вибираємо сторінку
                 page_query = f"SELECT DISTINCT url FROM content_changes WHERE competitor_name = '{competitor}'"
                 pages = pd.read_sql(page_query, conn)['url'].tolist()
 
                 if not pages:
                     st.write("Немає доступних сторінок для цього конкурента.")
                 else:
-                    page = st.selectbox("Виберіть сторінку", pages, key="content_page_selectbox")
+                    selected_page = st.selectbox("Виберіть сторінку", pages, key="content_page_selectbox")
 
-                    query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}' AND url = '{page}'"
+                    # Показуємо зміни для вибраної сторінки
+                    query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}' AND url = '{selected_page}'"
                     df = pd.read_sql(query, conn)
 
                     if not df.empty:
-                        # Додаємо selectbox для вибору року після вибору сторінки
                         selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
-                        st.markdown(
-                            f"<p style='font-size:12px;color:gray;'>Зміни для сторінки: {page} у {selected_year} році</p>",
-                            unsafe_allow_html=True)
-                        render_contribution_chart_by_months(df, selected_year)
+                        render_contribution_chart_by_months(df, selected_year, conn, competitor, selected_page)
                     else:
-                        st.markdown("<p style='font-size:10px;color:gray;'>Немає змін для цієї сторінки.</p>",
-                                    unsafe_allow_html=True)
+                        st.write("Немає змін для цієї сторінки.")
 
         st.markdown("<hr>", unsafe_allow_html=True)
 
@@ -391,6 +522,101 @@ def main():
 
                     st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
                                 unsafe_allow_html=True)
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+
+        # Порівняння контенту
+        with st.expander("Порівняння контенту", expanded=False):
+            st.subheader('Порівняння контенту')
+
+            # Отримуємо список конкурентів
+            competitors = get_competitors(conn)
+            selected_competitor = st.selectbox('Виберіть конкурента', competitors)
+
+            if selected_competitor:
+                # Вибір сторінки для конкурента
+                pages = get_pages_for_competitor(conn, selected_competitor)
+                selected_page = st.selectbox('Виберіть сторінку', pages)
+
+                if selected_page:
+                    # Вибір двох дат для порівняння
+                    dates = get_dates_for_page(conn, selected_competitor, selected_page)
+
+                    if dates:
+                        # Перетворення дат в формат datetime для віджета
+                        formatted_dates = [pd.to_datetime(date).date() for date in dates]
+
+                        # Вибір дат через календар
+                        selected_date1 = st.date_input('Виберіть першу дату', min_value=min(formatted_dates),
+                                                       max_value=max(formatted_dates),
+                                                       value=min(formatted_dates),
+                                                       key="date1")
+                        selected_date2 = st.date_input('Виберіть другу дату', min_value=min(formatted_dates),
+                                                       max_value=max(formatted_dates),
+                                                       value=max(formatted_dates),
+                                                       key="date2")
+
+                        # Перевіряємо, чи вибрано дві різні дати
+                        if selected_date1 and selected_date2 and selected_date1 != selected_date2:
+                            # Перетворення обраних дат у строки для SQL-запиту
+                            date1_str = pd.to_datetime(
+                                [date for date in dates if pd.to_datetime(date).date() == selected_date1][0])
+                            date2_str = pd.to_datetime(
+                                [date for date in dates if pd.to_datetime(date).date() == selected_date2][0])
+
+                            # Отримуємо дані для обраних дат
+                            data1 = get_page_data(conn, selected_competitor, selected_page, date1_str)
+                            data2 = get_page_data(conn, selected_competitor, selected_page, date2_str)
+
+                            if not data1.empty and not data2.empty:
+
+
+                                # Порівняння метаданих (Title, H1, Description)
+                                metadata_changes = [
+                                    {'Поле': col, 'Було': data1[col].values[0], 'Стало': data2[col].values[0]}
+                                    for col in ['title', 'h1', 'description'] if
+                                    data1[col].values[0] != data2[col].values[0]
+                                ]
+
+                                if metadata_changes:
+                                    st.subheader("Зміни в метаданих:")
+                                    metadata_df = pd.DataFrame(metadata_changes)
+                                    visualize_metadata_changes(metadata_df)
+                                else:
+                                    st.write("Змін у метаданих не знайдено.")
+
+                                # Перевірка на наявність змін у контенті
+                                if data1['content'].values[0] != data2['content'].values[0]:
+                                    st.subheader("Зміни в контенті:")
+                                    visualize_content_changes(data1['content'].values[0], data2['content'].values[0])
+                                else:
+                                    st.write("Змін у контенті не знайдено.")
+
+                                # Порівняння ключових слів
+                                if data1['keywords_found'].values[0] and data2['keywords_found'].values[0]:
+                                    keywords_comparison = compare_keywords(data1['keywords_found'].values[0],
+                                                                           data2['keywords_found'].values[0])
+                                    if not keywords_comparison.empty:
+                                        st.subheader("Зміни в ключових словах:")
+                                        visualize_keywords_changes(keywords_comparison)
+                                    else:
+                                        st.write("Змін у ключових словах не знайдено.")
+
+                                # Порівняння кількості ключових слів
+                                if data1['keywords_count'].values[0] != data2['keywords_count'].values[0]:
+                                    st.subheader("Зміни в кількості ключових слів:")
+                                    st.table(pd.DataFrame({
+                                        'Було': [data1['keywords_count'].values[0]],
+                                        'Стало': [data2['keywords_count'].values[0]]
+                                    }))
+                                else:
+                                    st.write("Змін у кількості ключових слів не знайдено.")
+                            else:
+                                st.write("Для обраних дат немає даних для порівняння.")
+                        else:
+                            st.warning("Оберіть дві різні дати для порівняння.")
+                    else:
+                        st.write("Немає доступних дат для цієї сторінки.")
 
 
 if __name__ == "__main__":
