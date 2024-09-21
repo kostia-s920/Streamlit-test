@@ -1,6 +1,7 @@
 import streamlit as st
 import psycopg2
 
+
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
