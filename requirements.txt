@@ -5,7 +5,3 @@ pandas
 seaborn
 altair
 plotly
-spacy
-scikit-learn
-gensim
-numpy==1.21.4
