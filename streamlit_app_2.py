@@ -549,7 +549,7 @@ def render_page_content_with_keywords(conn, competitors):
 def render_content_comparison(conn):
     st.title("Порівняння контенту")
     # Отримуємо список конкурентів
-    competitors = get_competitors(conn)
+    competitors = ['talentlms_com', 'docebo_com', 'ispringsolutions_com', 'paradisosolutions_com', 'academyocean_com']
     selected_competitor = st.selectbox('Виберіть конкурента', competitors)
 
     if selected_competitor:
