@@ -6,3 +6,6 @@ seaborn
 numpy
 altair
 plotly
+spacy
+scikit-learn
+gensim
