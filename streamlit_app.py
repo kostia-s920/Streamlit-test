@@ -191,6 +191,7 @@ def render_contribution_chart_by_months(change_dates, selected_year):
     # Викликаємо рендеринг місяців
     st.markdown(render_month_labels(), unsafe_allow_html=True)
 
+
 # Основна функція для відображення даних у Streamlit
 def main():
     # Підключаємося до бази даних
@@ -202,7 +203,6 @@ def main():
         # Візуалізація змін контенту
         with st.expander("Візуалізація змін контенту", expanded=False):
             st.subheader('Візуалізація змін контенту для конкурентів')
-
             competitor = st.selectbox("Виберіть конкурента",
                                       ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com',
                                        'academyocean_com'],
@@ -339,6 +339,8 @@ def main():
 
                     st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
                                 unsafe_allow_html=True)
+
+
 
 
 if __name__ == "__main__":
