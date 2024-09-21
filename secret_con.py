@@ -8,6 +8,7 @@ import pandas as pd
 from datetime import datetime
 
 
+
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
     try:
@@ -164,23 +165,25 @@ def get_keyword_history(conn, competitor_name, keyword):
 
 # Функція для побудови графіка ключових слів
 def plot_keyword_trend(df, competitor_name):
-    plt.figure(figsize=(10, 6))
+    fig = go.Figure()
+
+    # Проходимо по всім унікальним URL
     for url in df['url'].unique():
         url_data = df[df['url'] == url]
-        plt.plot(url_data['date_checked'], url_data['keywords_count'], label=url)
+        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=url_data['keywords_count'], mode='lines', name=url))
 
-    plt.title(f'Keyword Count Trend for {competitor_name}')
-    plt.xlabel('Date')
-    plt.ylabel('Keyword Count')
-    plt.legend(loc='best', bbox_to_anchor=(1, 1))
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    st.pyplot(plt)
+    fig.update_layout(
+        title=f'Keyword Count Trend for {competitor_name}',
+        xaxis_title='Date',
+        yaxis_title='Keyword Count',
+        legend_title='URL',
+        xaxis=dict(tickformat='%Y-%m-%d', tickangle=45)
+    )
+
+    st.plotly_chart(fig)
 
 # Функція для побудови історичного графіка по ключовому слову
 def plot_keyword_history(df, keyword, selected_url, chart_type):
-    plt.figure(figsize=(10, 6))
-
     # Фільтруємо дані по обраному URL
     url_data = df[df['url'] == selected_url]
     if url_data.empty:
@@ -193,51 +196,51 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
     # Використовуємо функцію для вилучення кількості ключових слів
     keyword_counts = url_data['keywords_found'].apply(lambda row: extract_keywords(row).get(keyword, 0))
 
+    fig = go.Figure()
+
     # Додаємо графік в залежності від обраного типу графіка
     if chart_type == 'Line Chart':
-        plt.plot(url_data['date_checked'], keyword_counts, label=selected_url)
+        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='lines', name=selected_url))
     elif chart_type == 'Bar Chart':
-        plt.bar(url_data['date_checked'], keyword_counts)
+        fig.add_trace(go.Bar(x=url_data['date_checked'], y=keyword_counts, name=selected_url))
     elif chart_type == 'Scatter Plot':
-        plt.scatter(url_data['date_checked'], keyword_counts)
+        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='markers', name=selected_url))
     elif chart_type == 'Area Chart':
-        plt.fill_between(url_data['date_checked'], keyword_counts, label=selected_url, alpha=0.5)
+        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, fill='tozeroy', name=selected_url))
     elif chart_type == 'Step Chart':
-        plt.step(url_data['date_checked'], keyword_counts, label=selected_url, where='mid')
+        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='lines', line_shape='hv', name=selected_url))
 
-    plt.title(f'Historical Trend for Keyword: {keyword}')
-    plt.xlabel('Date')
-    plt.ylabel('Keyword Occurrences')
+    fig.update_layout(
+        title=f'Historical Trend for Keyword: {keyword}',
+        xaxis_title='Date',
+        yaxis_title='Keyword Occurrences',
+        xaxis=dict(tickformat='%Y-%m-%d', tickangle=45)
+    )
 
-    # Форматування осі дати
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=1))
-    plt.gcf().autofmt_xdate()
-    plt.legend(loc='best', bbox_to_anchor=(1, 1))
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    st.pyplot(plt)
+    st.plotly_chart(fig)
 
 # Функція для графіка порівняння кількох конкурентів
 def plot_comparison(df_list, competitor_names, selected_urls):
-    plt.figure(figsize=(10, 6))
+    fig = go.Figure()
 
     # Проходимо по всім обраним конкурентам та їх сторінкам
     for df, competitor, url in zip(df_list, competitor_names, selected_urls):
         url_data = df[df['url'] == url]
         if not url_data.empty:
-            plt.plot(url_data['date_checked'], url_data['keywords_count'], label=f'{competitor}: {url}')
+            fig.add_trace(go.Scatter(x=url_data['date_checked'], y=url_data['keywords_count'],
+                                     mode='lines', name=f'{competitor}: {url}'))
         else:
             st.write(f"No data for {competitor}: {url}")
 
-    plt.title('Keyword Count Comparison')
-    plt.xlabel('Date')
-    plt.ylabel('Keyword Count')
-    plt.legend(loc='best', bbox_to_anchor=(1, 1))
-    plt.xticks(rotation=45)
-    plt.grid(True)
-    plt.tight_layout()
-    st.pyplot(plt)
+    fig.update_layout(
+        title='Keyword Count Comparison',
+        xaxis_title='Date',
+        yaxis_title='Keyword Count',
+        xaxis=dict(tickformat='%Y-%m-%d', tickangle=45),
+        legend_title="Competitor: URL"
+    )
+
+    st.plotly_chart(fig)
 
 # Функція для відображення контенту сторінки з підсвічуванням ключових слів
 def highlight_keywords(text, keywords):
@@ -398,7 +401,7 @@ def main():
 # Функції для кожної сторінки
 def render_content_change_visualization(conn):
     st.title("Візуалізація змін контенту")
-    st.subheader('Візуалізація змін контенту для конкурентів')
+
 
     # Отримуємо список конкурентів
     competitors = get_competitors(conn)
