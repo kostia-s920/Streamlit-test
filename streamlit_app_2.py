@@ -394,6 +394,9 @@ def render_contribution_chart_by_months(change_dates, selected_year, conn, compe
     # Викликаємо рендеринг місяців
     st.markdown(render_month_labels(), unsafe_allow_html=True)
 
+# Налаштування сторінки
+st.set_page_config(page_title="Change Tracker", page_icon="🔍")
+
 # Основна функція для відображення даних у Streamlit
 def main():
     # Підключаємося до бази даних
