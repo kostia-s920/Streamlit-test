@@ -185,18 +185,14 @@ def plot_keyword_trend(df, competitor_name):
         xaxis_title='Date',
         yaxis_title='Keyword Count',
         legend_title='URL',
-        xaxis=dict(tickformat='%Y-%m-%d', tickangle=45)
+        xaxis=dict(tickformat='%Y-%m-%d', tickangle=45),
+        yaxis=dict(
+            tickmode='linear',
+            dtick=1  # Показуємо тільки цілі числа
+        )
     )
 
     st.plotly_chart(fig)
-    fig = go.Figure()
-    fig.update_layout(
-        yaxis=dict(
-            tickmode='linear',  # Використовуємо лінійний режим для міток
-            dtick=1,  # Встановлюємо крок міток як 1, щоб показувати лише цілі числа
-            title="Keyword Occurrences"  # Назва осі Y
-        )
-    )
 
 
 # Функція для побудови історичного графіка по ключовому слову
