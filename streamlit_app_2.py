@@ -193,7 +193,7 @@ def plot_keyword_trend(df, competitor_name):
 # Функція для побудови історичного графіка по ключовому слову
 def plot_keyword_history(df, keyword, selected_url, chart_type):
     # Фільтруємо дані по обраному URL
-    url_data = df[df['url'] == selected_url]
+    url_data = df[df['url'] == selected_url].copy()
     if url_data.empty:
         st.write(f"No data for URL: {selected_url}")
         return
@@ -201,22 +201,33 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
     # Перетворення дат на datetime
     url_data['date_checked'] = pd.to_datetime(url_data['date_checked'], errors='coerce')
 
-    # Використовуємо функцію для вилучення кількості ключових слів
-    keyword_counts = url_data['keywords_found'].apply(lambda row: extract_keywords(row).get(keyword, 0))
+    # Створюємо діапазон дат, включаючи відсутні дати
+    start_date = url_data['date_checked'].min()
+    end_date = pd.to_datetime("today").normalize()  # Використовуємо сьогоднішню дату
+    full_date_range = pd.date_range(start=start_date, end=end_date)
+
+    # Створюємо DataFrame з повним діапазоном дат
+    full_data = pd.DataFrame(full_date_range, columns=['date_checked'])
+
+    # Об'єднуємо дані, заповнюючи відсутні дати значенням 0
+    merged_data = pd.merge(full_data, url_data[['date_checked', 'keywords_found']], on='date_checked', how='left')
+
+    # Заповнюємо значення ключових слів як 0, де їх немає
+    merged_data['keywords_found'] = merged_data['keywords_found'].apply(lambda row: extract_keywords(row).get(keyword, 0) if pd.notna(row) else 0)
 
     fig = go.Figure()
 
     # Додаємо графік в залежності від обраного типу графіка
     if chart_type == 'Line Chart':
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='lines', name=selected_url))
+        fig.add_trace(go.Scatter(x=merged_data['date_checked'], y=merged_data['keywords_found'], mode='lines', name=selected_url))
     elif chart_type == 'Bar Chart':
-        fig.add_trace(go.Bar(x=url_data['date_checked'], y=keyword_counts, name=selected_url))
+        fig.add_trace(go.Bar(x=merged_data['date_checked'], y=merged_data['keywords_found'], name=selected_url))
     elif chart_type == 'Scatter Plot':
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='markers', name=selected_url))
+        fig.add_trace(go.Scatter(x=merged_data['date_checked'], y=merged_data['keywords_found'], mode='markers', name=selected_url))
     elif chart_type == 'Area Chart':
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, fill='tozeroy', name=selected_url))
+        fig.add_trace(go.Scatter(x=merged_data['date_checked'], y=merged_data['keywords_found'], fill='tozeroy', name=selected_url))
     elif chart_type == 'Step Chart':
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='lines', line_shape='hv', name=selected_url))
+        fig.add_trace(go.Scatter(x=merged_data['date_checked'], y=merged_data['keywords_found'], mode='lines', line_shape='hv', name=selected_url))
 
     fig.update_layout(
         title=f'Historical Trend for Keyword: {keyword}',
