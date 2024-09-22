@@ -216,6 +216,14 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
     merged_data['keywords_found'] = merged_data['keywords_found'].apply(lambda row: extract_keywords(row).get(keyword, 0) if pd.notna(row) else 0)
 
     fig = go.Figure()
+    fig.update_layout(
+        yaxis=dict(
+            tickmode='linear',  # Використовуємо лінійний режим для міток
+            dtick=1,  # Встановлюємо крок міток як 1, щоб показувати лише цілі числа
+            title="Keyword Occurrences"  # Назва осі Y
+        )
+    )
+
 
     # Додаємо графік в залежності від обраного типу графіка
     if chart_type == 'Line Chart':
