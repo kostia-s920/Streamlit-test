@@ -193,7 +193,7 @@ def plot_keyword_trend(df, competitor_name):
 # Функція для побудови історичного графіка по ключовому слову
 def plot_keyword_history(df, keyword, selected_url, chart_type):
     # Фільтруємо дані по обраному URL
-    url_data = df[df['url'] == selected_url]
+    url_data = df[df['url'] == selected_url].copy()  # Make sure to copy the DataFrame
     if url_data.empty:
         st.write(f"No data for URL: {selected_url}")
         return
@@ -207,8 +207,15 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
     # Перевіряємо, чи є в датафреймі запис про сьогоднішню дату, якщо ні - додаємо її з кількістю 0
     today = pd.to_datetime("today").normalize()
     if today not in url_data['date_checked'].values:
-        url_data = url_data.append({'date_checked': today, 'keywords_found': f"{keyword} - 0"}, ignore_index=True)
-        keyword_counts = keyword_counts.append(pd.Series([0]))
+        # Create a new row with today's date and 0 occurrences for the keyword
+        new_row = pd.DataFrame({
+            'date_checked': [today],
+            'url': [selected_url],
+            'keywords_found': [f"{keyword} - 0"]
+        })
+
+        url_data = pd.concat([url_data, new_row], ignore_index=True)  # Properly concatenate rows
+        keyword_counts = keyword_counts.append(pd.Series([0]), ignore_index=True)
 
     fig = go.Figure()
 
@@ -222,7 +229,8 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
     elif chart_type == 'Area Chart':
         fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, fill='tozeroy', name=selected_url))
     elif chart_type == 'Step Chart':
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='lines', line_shape='hv', name=selected_url))
+        fig.add_trace(
+            go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='lines', line_shape='hv', name=selected_url))
 
     fig.update_layout(
         title=f'Historical Trend for Keyword: {keyword}',
