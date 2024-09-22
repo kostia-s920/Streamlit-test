@@ -189,6 +189,15 @@ def plot_keyword_trend(df, competitor_name):
     )
 
     st.plotly_chart(fig)
+    fig = go.Figure()
+    fig.update_layout(
+        yaxis=dict(
+            tickmode='linear',  # Використовуємо лінійний режим для міток
+            dtick=1,  # Встановлюємо крок міток як 1, щоб показувати лише цілі числа
+            title="Keyword Occurrences"  # Назва осі Y
+        )
+    )
+
 
 # Функція для побудови історичного графіка по ключовому слову
 def plot_keyword_history(df, keyword, selected_url, chart_type):
