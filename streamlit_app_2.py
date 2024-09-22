@@ -201,22 +201,32 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
     # Перетворення дат на datetime
     url_data['date_checked'] = pd.to_datetime(url_data['date_checked'], errors='coerce')
 
-    # Використовуємо функцію для вилучення кількості ключових слів
-    keyword_counts = url_data['keywords_found'].apply(lambda row: extract_keywords(row).get(keyword, 0))
+    # Створюємо список усіх унікальних дат для побудови повного графіка
+    all_dates = pd.date_range(start=url_data['date_checked'].min(), end=url_data['date_checked'].max(), freq='D')
+
+    # Створюємо словник з кількістю ключових слів для кожної дати
+    keyword_counts = {date: 0 for date in all_dates}  # ініціалізуємо всі дати як 0
+    for idx, row in url_data.iterrows():
+        date = row['date_checked']
+        keyword_counts[date] = extract_keywords(row['keywords_found']).get(keyword, 0)
+
+    # Перетворюємо словник у формат, що підтримується Plotly
+    dates = list(keyword_counts.keys())
+    counts = list(keyword_counts.values())
 
     fig = go.Figure()
 
     # Додаємо графік в залежності від обраного типу графіка
     if chart_type == 'Line Chart':
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='lines', name=selected_url))
+        fig.add_trace(go.Scatter(x=dates, y=counts, mode='lines', name=selected_url))
     elif chart_type == 'Bar Chart':
-        fig.add_trace(go.Bar(x=url_data['date_checked'], y=keyword_counts, name=selected_url))
+        fig.add_trace(go.Bar(x=dates, y=counts, name=selected_url))
     elif chart_type == 'Scatter Plot':
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='markers', name=selected_url))
+        fig.add_trace(go.Scatter(x=dates, y=counts, mode='markers', name=selected_url))
     elif chart_type == 'Area Chart':
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, fill='tozeroy', name=selected_url))
+        fig.add_trace(go.Scatter(x=dates, y=counts, fill='tozeroy', name=selected_url))
     elif chart_type == 'Step Chart':
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='lines', line_shape='hv', name=selected_url))
+        fig.add_trace(go.Scatter(x=dates, y=counts, mode='lines', line_shape='hv', name=selected_url))
 
     fig.update_layout(
         title=f'Historical Trend for Keyword: {keyword}',
