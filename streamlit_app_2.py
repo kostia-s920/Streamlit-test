@@ -227,28 +227,6 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
 
     st.plotly_chart(fig)
 
-    # Додаємо графік в залежності від обраного типу графіка
-    if chart_type == 'Line Chart':
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='lines', name=selected_url))
-    elif chart_type == 'Bar Chart':
-        fig.add_trace(go.Bar(x=url_data['date_checked'], y=keyword_counts, name=selected_url))
-    elif chart_type == 'Scatter Plot':
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='markers', name=selected_url))
-    elif chart_type == 'Area Chart':
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=keyword_counts, fill='tozeroy', name=selected_url))
-    elif chart_type == 'Step Chart':
-        fig.add_trace(
-            go.Scatter(x=url_data['date_checked'], y=keyword_counts, mode='lines', line_shape='hv', name=selected_url))
-
-    fig.update_layout(
-        title=f'Historical Trend for Keyword: {keyword}',
-        xaxis_title='Date',
-        yaxis_title='Keyword Occurrences',
-        xaxis=dict(tickformat='%Y-%m-%d', tickangle=45)
-    )
-
-    st.plotly_chart(fig)
-
 # Функція для графіка порівняння кількох конкурентів
 def plot_comparison(df_list, competitor_names, selected_urls):
     fig = go.Figure()
