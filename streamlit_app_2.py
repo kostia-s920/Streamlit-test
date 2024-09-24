@@ -34,7 +34,7 @@ def connect_to_db():
         return None
 
 #Функція для отримання списку конкурентів
-def get_competitors(conn):
+def get_competitors_from_content_changes(conn):
     query = "SELECT DISTINCT competitor_name FROM content_changes"
     return pd.read_sql(query, conn)['competitor_name'].tolist()
 
@@ -397,6 +397,19 @@ def render_contribution_chart_by_months(change_dates, selected_year, conn, compe
 # Налаштування сторінки
 st.set_page_config(page_title="Change Tracker", page_icon="🔍")
 
+
+def get_competitors_from_db(conn):
+    query = """
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_name LIKE '%_com';
+    """
+
+    # Виконуємо запит і отримуємо список таблиць-конкурентів
+    competitor_tables = pd.read_sql(query, conn)['table_name'].tolist()
+    return competitor_tables
+
+
 # Основна функція для відображення даних у Streamlit
 def main():
     # Підключаємося до бази даних
@@ -405,9 +418,6 @@ def main():
     if conn:
         # Додаємо бічну панель для навігації між сторінками
         st.sidebar.title("Навігація")
-
-        # Отримуємо список конкурентів
-        competitors = get_competitors(conn)
 
         # Список сторінок
         pages = ["Візуалізація змін контенту",
@@ -425,9 +435,9 @@ def main():
         elif page_selection == "Загальна кількість ключових слів":
             render_keyword_count(conn)
         elif page_selection == "Порівняння ключових слів між конкурентами":
-            render_keyword_comparison(conn, competitors)
+            render_keyword_comparison(conn)
         elif page_selection == "Контент сторінки з підсвіченими ключовими словами":
-            render_page_content_with_keywords(conn, competitors)
+            render_page_content_with_keywords(conn)
         elif page_selection == "Порівняння контенту":
             render_content_comparison(conn)
 
@@ -436,9 +446,8 @@ def main():
 def render_content_change_visualization(conn):
     st.title("Візуалізація змін контенту")
 
-
     # Отримуємо список конкурентів
-    competitors = get_competitors(conn)
+    competitors = get_competitors_from_content_changes(conn)
 
     competitor = st.selectbox("Виберіть конкурента", competitors, key="content_competitor_selectbox")
 
@@ -479,7 +488,9 @@ def render_content_change_visualization(conn):
 
 def render_keyword_count(conn):
     st.title("Загальна кількість ключових слів")
-    competitors = ['docebo_com', 'ispringsolutions_com', 'talentlms_com', 'paradisosolutions_com', 'academyocean_com']
+    # Отримуємо список конкурентів через функцію get_competitors_from_db
+    competitors = get_competitors_from_db(conn)
+
     competitor_name = st.selectbox("Виберіть конкурента", competitors, key="keyword_competitor_selectbox")
     df = get_keyword_data(conn, competitor_name)
 
@@ -531,8 +542,11 @@ def render_keyword_count(conn):
                                 st.write(f"Немає даних для ключового слова: {keyword}")
 
 
-def render_keyword_comparison(conn, competitors):
+def render_keyword_comparison(conn):
     st.title("Порівняння ключових слів між конкурентами")
+    # Отримуємо список конкурентів через функцію get_competitors_from_db
+    competitors = get_competitors_from_db(conn)
+
     selected_competitors = st.multiselect("Виберіть конкурентів для порівняння", competitors,
                                           default=competitors[:2], key="comparison_competitors_multiselect")
     df_list = [get_keyword_data(conn, competitor) for competitor in selected_competitors]
@@ -547,40 +561,53 @@ def render_keyword_comparison(conn, competitors):
         plot_comparison(df_list, selected_competitors, selected_urls_for_comparison)
 
 
-def render_page_content_with_keywords(conn, competitors):
+def render_page_content_with_keywords(conn):
     st.title("Контент сторінки з підсвіченими ключовими словами")
+    # Отримуємо список конкурентів через функцію get_competitors_from_db
+    competitors = get_competitors_from_db(conn)
+
     competitor_name_content = st.selectbox("Виберіть конкурента для перегляду контенту", competitors,
                                            key="content_competitor_selectbox_2")
+
     df_content = get_keyword_data(conn, competitor_name_content)
 
     if not df_content.empty:
+        # Вибір URL для перегляду контенту
         selected_url_for_content = st.selectbox('Виберіть URL для перегляду контенту',
                                                 df_content['url'].unique(), key="content_url_selectbox_2")
+
+        # Вибір дати
         selected_date_for_content = st.selectbox('Виберіть дату',
                                                  df_content[df_content['url'] == selected_url_for_content][
                                                      'date_checked'].dt.date.unique(),
                                                  key="content_date_selectbox")
 
         if selected_date_for_content:
+            # Фільтрація даних за URL та датою
             page_content_data = df_content[(df_content['url'] == selected_url_for_content) & (
                     df_content['date_checked'].dt.date == selected_date_for_content)]
+
+            # Отримання контенту сторінки
             page_content = page_content_data['content'].values[0]
             keywords_found = page_content_data['keywords_found'].values[0]
+
+            # Обробка знайдених ключових слів
             keywords_dict = extract_keywords(keywords_found)
             highlighted_content = highlight_keywords(page_content, list(keywords_dict.keys()))
 
+            # Відображення контенту з підсвіченими ключовими словами
             st.markdown(f"<div style='white-space: pre-wrap; padding: 15px;'>{highlighted_content}</div>",
                         unsafe_allow_html=True)
 
 
 def render_content_comparison(conn):
     st.title("Порівняння контенту")
-    # Отримуємо список конкурентів
-    competitors = ['talentlms_com', 'docebo_com', 'ispringsolutions_com', 'paradisosolutions_com', 'academyocean_com']
+    # Отримуємо список конкурентів через функцію get_competitors_from_db
+    competitors = get_competitors_from_db(conn)
+
     selected_competitor = st.selectbox('Виберіть конкурента', competitors)
 
     if selected_competitor:
-        # Вибір сторінки для конкурента
         pages = get_pages_for_competitor(conn, selected_competitor)
         selected_page = st.selectbox('Виберіть сторінку', pages)
 
