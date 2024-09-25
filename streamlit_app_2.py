@@ -69,12 +69,18 @@ def get_page_data(conn, competitor_name, page_url, date):
 # Функція для побудови Plotly таблиці для змін у метаданих
 def visualize_metadata_changes(metadata_changes):
     fig = go.Figure(data=[go.Table(
-        header=dict(values=["Поле", "Було", "Стало"],
-                    fill_color='paleturquoise',
-                    align='left'),
-        cells=dict(values=[metadata_changes['Поле'], metadata_changes['Було'], metadata_changes['Стало']],
-                   fill_color='lavender',
-                   align='left'))
+        header=dict(
+            values=["Поле", "Було", "Стало"],
+            fill_color='paleturquoise',
+            align='left',
+            font=dict(color='black')  # Встановлюємо колір тексту заголовка
+        ),
+        cells=dict(
+            values=[metadata_changes['Поле'], metadata_changes['Було'], metadata_changes['Стало']],
+            fill_color='lavender',
+            align='left',
+            font=dict(color='black')  # Встановлюємо колір тексту в клітинках
+        ))
     ])
     fig.update_layout(width=800, height=400)
     st.plotly_chart(fig)
@@ -83,13 +89,23 @@ def visualize_metadata_changes(metadata_changes):
 # Функція для побудови Plotly таблиці для ключових слів
 def visualize_keywords_changes(keywords_changes):
     fig = go.Figure(data=[go.Table(
-        header=dict(values=["Ключове слово", "Зміна", "Було", "Стало"],
-                    fill_color='paleturquoise',
-                    align='left'),
-        cells=dict(values=[keywords_changes['Ключове слово'], keywords_changes['Зміна'],
-                           keywords_changes['Було'], keywords_changes['Стало']],
-                   fill_color='lavender',
-                   align='left'))
+        header=dict(
+            values=["Ключове слово", "Зміна", "Було", "Стало"],
+            fill_color='paleturquoise',
+            align='left',
+            font=dict(color='black')  # Встановлюємо чорний колір тексту заголовка
+        ),
+        cells=dict(
+            values=[
+                keywords_changes['Ключове слово'],
+                keywords_changes['Зміна'],
+                keywords_changes['Було'],
+                keywords_changes['Стало']
+            ],
+            fill_color='lavender',
+            align='left',
+            font=dict(color='black')  # Встановлюємо чорний колір тексту в клітинках
+        ))
     ])
     fig.update_layout(width=800, height=400)
     st.plotly_chart(fig)
@@ -120,7 +136,6 @@ def visualize_content_changes(content_before, content_after):
 
     fig.update_layout(width=800, height=400)
     st.plotly_chart(fig)
-
 
 # Оновлена функція для вилучення ключових слів і кількості їх повторень
 def extract_keywords(row):
