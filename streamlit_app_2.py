@@ -122,10 +122,22 @@ def visualize_content_changes(content_before, content_after):
     st.plotly_chart(fig)
 
 
-# Функція для вилучення ключових слів і кількості їх повторень
+# Оновлена функція для вилучення ключових слів і кількості їх повторень
 def extract_keywords(row):
-    pattern = re.findall(r'([\w\s-]+?)\s*-\s*(\d+)\s*разів', row)
-    keywords_dict = {match[0].strip(): int(match[1]) for match in pattern}
+    if pd.isna(row) or not row.strip():
+        return {}
+    entries = row.split(',')
+    keywords_dict = {}
+    for entry in entries:
+        entry = entry.strip()
+        match = re.match(r'^\s*(?P<keyword>.*?)\s*-\s*(?P<count>\d+)\s*разів', entry)
+        if match:
+            keyword = match.group('keyword').strip().lower()
+            count = int(match.group('count'))
+            if keyword in keywords_dict:
+                keywords_dict[keyword] += count
+            else:
+                keywords_dict[keyword] = count
     return keywords_dict
 
 
@@ -206,50 +218,36 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
     # Перетворення дат на datetime
     url_data['date_checked'] = pd.to_datetime(url_data['date_checked'], errors='coerce')
 
-    # Створюємо діапазон дат, включаючи відсутні дати
-    start_date = url_data['date_checked'].min()
-    end_date = pd.to_datetime("today").normalize()  # Використовуємо сьогоднішню дату
-    full_date_range = pd.date_range(start=start_date, end=end_date)
-
-    # Створюємо DataFrame з повним діапазоном дат
-    full_data = pd.DataFrame(full_date_range, columns=['date_checked'])
-
-    # Об'єднуємо дані, заповнюючи відсутні дати значенням 0
-    merged_data = pd.merge(full_data, url_data[['date_checked', 'keywords_found']], on='date_checked', how='left')
-
-    # Заповнюємо значення ключових слів як 0, де їх немає
-    merged_data['keywords_found'] = merged_data['keywords_found'].apply(lambda row: extract_keywords(row).get(keyword, 0) if pd.notna(row) else 0)
-
-    fig = go.Figure()
-    fig.update_layout(
-        yaxis=dict(
-            tickmode='linear',  # Використовуємо лінійний режим для міток
-            dtick=1,  # Встановлюємо крок міток як 1, щоб показувати лише цілі числа
-            title="Keyword Occurrences"  # Назва осі Y
-        )
+    # Створюємо колонку з кількістю повторень ключового слова
+    url_data['keyword_count'] = url_data['keywords_found'].apply(
+        lambda row: extract_keywords(row).get(keyword.lower(), 0) if pd.notna(row) else 0
     )
 
+    # Фільтруємо дані, залишаючи лише ті рядки, де ключове слово присутнє
+    url_data = url_data[url_data['keyword_count'] > 0]
 
-    # Додаємо графік в залежності від обраного типу графіка
+    # Якщо після фільтрації даних немає, повідомляємо користувача
+    if url_data.empty:
+        st.write(f"Немає даних для ключового слова '{keyword}' на обраному URL.")
+        return
+
+    # Побудова графіка
+    fig = go.Figure()
+
     if chart_type == 'Line Chart':
-        fig.add_trace(go.Scatter(x=merged_data['date_checked'], y=merged_data['keywords_found'], mode='lines', name=selected_url))
+        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=url_data['keyword_count'], mode='lines', name=selected_url))
     elif chart_type == 'Bar Chart':
-        fig.add_trace(go.Bar(x=merged_data['date_checked'], y=merged_data['keywords_found'], name=selected_url))
-    elif chart_type == 'Scatter Plot':
-        fig.add_trace(go.Scatter(x=merged_data['date_checked'], y=merged_data['keywords_found'], mode='markers', name=selected_url))
-    elif chart_type == 'Area Chart':
-        fig.add_trace(go.Scatter(x=merged_data['date_checked'], y=merged_data['keywords_found'], fill='tozeroy', name=selected_url))
-    elif chart_type == 'Step Chart':
-        fig.add_trace(go.Scatter(x=merged_data['date_checked'], y=merged_data['keywords_found'], mode='lines', line_shape='hv', name=selected_url))
+        fig.add_trace(go.Bar(x=url_data['date_checked'], y=url_data['keyword_count'], name=selected_url))
 
     fig.update_layout(
-        title=f'Historical Trend for Keyword: {keyword}',
-        xaxis_title='Date',
-        yaxis_title='Keyword Occurrences',
+        title=f'Історичний тренд для ключового слова: {keyword}',
+        xaxis_title='Дата',
+        yaxis_title='Кількість повторень',
         xaxis=dict(tickformat='%Y-%m-%d', tickangle=45)
     )
 
     st.plotly_chart(fig)
+
 
 # Функція для графіка порівняння кількох конкурентів
 def plot_comparison(df_list, competitor_names, selected_urls):
