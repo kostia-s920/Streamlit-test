@@ -6,6 +6,8 @@ import streamlit as st
 import psycopg2
 import pandas as pd
 from datetime import datetime
+import difflib
+import streamlit.components.v1 as components
 
 # Функція для підключення до бази даних PostgreSQL
 def connect_to_db():
@@ -61,9 +63,9 @@ def get_page_data(conn, competitor_name, page_url, date):
     query = f"""
         SELECT title, h1, description, content, keywords_found, keywords_count
         FROM {competitor_name}
-        WHERE url = '{page_url}' AND date_checked = '{date}'
+        WHERE url = %s AND date_checked = %s
     """
-    return pd.read_sql(query, conn)
+    return pd.read_sql(query, conn, params=[page_url, date])
 
 
 # Функція для побудови Plotly таблиці для змін у метаданих
@@ -113,29 +115,21 @@ def visualize_keywords_changes(keywords_changes):
 
 # Функція для порівняння контенту і візуалізації змін за допомогою Plotly
 def visualize_content_changes(content_before, content_after):
+
+    # Розбиваємо контент на рядки
     before_lines = content_before.splitlines()
     after_lines = content_after.splitlines()
 
-    # Визначаємо кольори для кожного рядка
-    line_colors = []
-    for old_line, new_line in zip(before_lines, after_lines):
-        if old_line == new_line:
-            line_colors.append('white')  # Немає змін
-        else:
-            line_colors.append('yellow')  # Зміна у рядку
+    # Створюємо об'єкт HtmlDiff
+    differ = difflib.HtmlDiff(wrapcolumn=50)
 
-    # Створюємо таблицю Plotly
-    fig = go.Figure(data=[go.Table(
-        header=dict(values=["Рядок до", "Рядок після"],
-                    fill_color='paleturquoise',
-                    align='left'),
-        cells=dict(values=[before_lines, after_lines],
-                   fill_color=[['white'] * len(before_lines), line_colors],
-                   align='left'))
-    ])
+    # Генеруємо HTML з підсвіченими змінами
+    diff_html = differ.make_file(before_lines, after_lines, fromdesc='Було', todesc='Стало')
 
-    fig.update_layout(width=800, height=400)
-    st.plotly_chart(fig)
+    # Відображаємо HTML у Streamlit
+    st.subheader("Порівняння контенту:")
+    components.html(diff_html, height=600,scrolling=True)
+
 
 # Оновлена функція для вилучення ключових слів і кількості їх повторень
 def extract_keywords(row):
@@ -200,26 +194,62 @@ def get_keyword_history(conn, competitor_name, keyword):
 
 # Функція для побудови графіка ключових слів
 def plot_keyword_trend(df, competitor_name):
+    # Перетворення 'date_checked' у формат datetime
+    df['date_checked'] = pd.to_datetime(df['date_checked'])
+
     fig = go.Figure()
 
     # Проходимо по всім унікальним URL
     for url in df['url'].unique():
         url_data = df[df['url'] == url]
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=url_data['keywords_count'], mode='lines', name=url))
+        fig.add_trace(go.Scatter(
+            x=url_data['date_checked'],
+            y=url_data['keywords_count'],
+            mode='lines+markers',
+            name=url,
+            hoverinfo='text',
+            hovertext=[
+                f"Дата: {date.strftime('%Y-%m-%d')}<br>Кількість ключових слів: {count}"
+                for date, count in zip(url_data['date_checked'], url_data['keywords_count'])
+            ]
+        ))
 
+    # Додаємо пояснення до графіка
     fig.update_layout(
-        title=f'Keyword Count Trend for {competitor_name}',
-        xaxis_title='Date',
-        yaxis_title='Keyword Count',
+        title={
+            'text': f'Тренд кількості ключових слів для {competitor_name}',
+            'y':0.9,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'
+        },
+        xaxis_title='Дата',
+        yaxis_title='Кількість ключових слів',
         legend_title='URL',
-        xaxis=dict(tickformat='%Y-%m-%d', tickangle=45),
+        xaxis=dict(
+            tickformat='%Y-%m-%d',
+            tickangle=45
+        ),
         yaxis=dict(
             tickmode='linear',
             dtick=1  # Показуємо тільки цілі числа
-        )
+        ),
+        hovermode='x unified',
+        annotations=[
+            dict(
+                xref='paper',
+                yref='paper',
+                x=0,
+                y=-0.2,
+                showarrow=False,
+                text="Цей графік показує, як змінюється загальна кількість ключових слів на сторінках конкурента з часом.",
+                font=dict(size=12)
+            )
+
+        ]
     )
 
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
 
 # Функція для побудови історичного графіка по ключовому слову
@@ -227,7 +257,7 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
     # Фільтруємо дані по обраному URL
     url_data = df[df['url'] == selected_url].copy()
     if url_data.empty:
-        st.write(f"No data for URL: {selected_url}")
+        st.error(f"Немає даних для URL: {selected_url}")
         return
 
     # Перетворення дат на datetime
@@ -243,25 +273,58 @@ def plot_keyword_history(df, keyword, selected_url, chart_type):
 
     # Якщо після фільтрації даних немає, повідомляємо користувача
     if url_data.empty:
-        st.write(f"Немає даних для ключового слова '{keyword}' на обраному URL.")
+        st.warning(f"Немає даних для ключового слова '{keyword}' на обраному URL.")
         return
 
     # Побудова графіка
     fig = go.Figure()
 
     if chart_type == 'Line Chart':
-        fig.add_trace(go.Scatter(x=url_data['date_checked'], y=url_data['keyword_count'], mode='lines', name=selected_url))
+        fig.add_trace(go.Scatter(
+            x=url_data['date_checked'],
+            y=url_data['keyword_count'],
+            mode='lines+markers',
+            name=selected_url,
+            hoverinfo='text',
+            hovertext=[
+                f"Дата: {date.strftime('%Y-%m-%d')}<br>Кількість повторень: {count}"
+                for date, count in zip(url_data['date_checked'], url_data['keyword_count'])
+            ]
+        ))
     elif chart_type == 'Bar Chart':
-        fig.add_trace(go.Bar(x=url_data['date_checked'], y=url_data['keyword_count'], name=selected_url))
+        fig.add_trace(go.Bar(
+            x=url_data['date_checked'],
+            y=url_data['keyword_count'],
+            name=selected_url,
+            text=url_data['keyword_count'],
+            textposition='auto',
+            hoverinfo='text',
+            hovertext=[
+                f"Дата: {date.strftime('%Y-%m-%d')}<br>Кількість повторень: {count}"
+                for date, count in zip(url_data['date_checked'], url_data['keyword_count'])
+            ]
+        ))
 
+    # Додаємо пояснення до графіка
     fig.update_layout(
         title=f'Історичний тренд для ключового слова: {keyword}',
         xaxis_title='Дата',
         yaxis_title='Кількість повторень',
-        xaxis=dict(tickformat='%Y-%m-%d', tickangle=45)
+        xaxis=dict(tickformat='%Y-%m-%d', tickangle=45),
+        annotations=[
+            dict(
+                xref='paper',
+                yref='paper',
+                x=0,
+                y=-0.2,
+                showarrow=False,
+                text="Цей графік показує, як змінювалася кількість використань ключового слова на сторінці з часом.",
+                font=dict(size=12)
+            )
+        ]
     )
 
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
 
 # Функція для графіка порівняння кількох конкурентів
@@ -460,7 +523,8 @@ def render_content_change_visualization(conn):
     st.title("Візуалізація змін контенту")
 
     # Отримуємо список конкурентів
-    competitors = get_competitors_from_content_changes(conn)
+    with st.spinner('Завантаження списку конкурентів...'):
+        competitors = get_competitors_from_content_changes(conn)
 
     competitor = st.selectbox("Виберіть конкурента", competitors, key="content_competitor_selectbox")
 
@@ -469,34 +533,40 @@ def render_content_change_visualization(conn):
 
     if view_all:
         # Показуємо всі зміни конкурента
-        query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}'"
-        df = pd.read_sql(query, conn)
+        with st.spinner('Завантаження даних про зміни...'):
+            query = "SELECT change_date FROM content_changes WHERE competitor_name = %s"
+            df = pd.read_sql(query, conn, params=[competitor])
 
         if not df.empty:
-            selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
+            years = sorted(pd.to_datetime(df['change_date']).dt.year.unique())
+            selected_year = st.selectbox("Оберіть рік", years, key="year_selectbox")
             st.subheader(f"Загальні зміни для {competitor} у {selected_year} році")
             render_contribution_chart_by_months(df, selected_year, conn, competitor)
         else:
-            st.write("Немає змін для цього конкурента.")
+            st.info("Немає змін для цього конкурента.")
     else:
         # Якщо не вибрано "Показати всі зміни конкурента", вибираємо сторінку
-        page_query = f"SELECT DISTINCT url FROM content_changes WHERE competitor_name = '{competitor}'"
-        pages = pd.read_sql(page_query, conn)['url'].tolist()
+        with st.spinner('Завантаження списку сторінок...'):
+            page_query = "SELECT DISTINCT url FROM content_changes WHERE competitor_name = %s"
+            pages = pd.read_sql(page_query, conn, params=[competitor])['url'].tolist()
 
         if not pages:
-            st.write("Немає доступних сторінок для цього конкурента.")
+            st.info("Немає доступних сторінок для цього конкурента.")
         else:
             selected_page = st.selectbox("Виберіть сторінку", pages, key="content_page_selectbox")
 
             # Показуємо зміни для вибраної сторінки
-            query = f"SELECT change_date FROM content_changes WHERE competitor_name = '{competitor}' AND url = '{selected_page}'"
-            df = pd.read_sql(query, conn)
+            with st.spinner('Завантаження даних про зміни...'):
+                query = "SELECT change_date FROM content_changes WHERE competitor_name = %s AND url = %s"
+                df = pd.read_sql(query, conn, params=[competitor, selected_page])
 
             if not df.empty:
-                selected_year = st.selectbox("Оберіть рік", [2024, 2025], key="year_selectbox")
+                years = sorted(pd.to_datetime(df['change_date']).dt.year.unique())
+                selected_year = st.selectbox("Оберіть рік", years, key="year_selectbox")
+                st.subheader(f"Зміни для {competitor} на сторінці {selected_page} у {selected_year} році")
                 render_contribution_chart_by_months(df, selected_year, conn, competitor, selected_page)
             else:
-                st.write("Немає змін для цієї сторінки.")
+                st.info("Немає змін для цієї сторінки.")
 
 
 def render_keyword_count(conn):
@@ -505,22 +575,33 @@ def render_keyword_count(conn):
     competitors = get_competitors_from_db(conn)
 
     competitor_name = st.selectbox("Виберіть конкурента", competitors, key="keyword_competitor_selectbox")
-    df = get_keyword_data(conn, competitor_name)
+
+    with st.spinner('Завантаження даних...'):
+        df = get_keyword_data(conn, competitor_name)
 
     if not df.empty:
-        selected_urls = st.multiselect('Виберіть URL', df['url'].unique(), max_selections=5,
-                                       key="keyword_url_multiselect")
+        df['date_checked'] = pd.to_datetime(df['date_checked'])
 
         # Фільтр по датах
-        start_date = pd.to_datetime(
-            st.date_input('Початкова дата', df['date_checked'].min(), key="keyword_start_date")).date()
-        end_date = pd.to_datetime(
-            st.date_input('Кінцева дата', df['date_checked'].max(), key="keyword_end_date")).date()
-        df['date_checked'] = pd.to_datetime(df['date_checked']).dt.date
-        df = df[(df['date_checked'] >= start_date) & (df['date_checked'] <= end_date)]
+        min_date = df['date_checked'].min().date()
+        max_date = df['date_checked'].max().date()
+        start_date = st.date_input('Початкова дата', min_date, min_value=min_date, max_value=max_date, key="keyword_start_date")
+        end_date = st.date_input('Кінцева дата', max_date, min_value=min_date, max_value=max_date, key="keyword_end_date")
+
+        if start_date > end_date:
+            st.error('Початкова дата не може бути пізніше кінцевої дати.')
+            return
+
+        df = df[(df['date_checked'].dt.date >= start_date) & (df['date_checked'].dt.date <= end_date)]
+
+        selected_urls = st.multiselect('Виберіть URL', df['url'].unique(), key="keyword_url_multiselect")
 
         if selected_urls:
             df = df[df['url'].isin(selected_urls)]
+
+            if df.empty:
+                st.warning("Немає даних для вибраних URL та дат.")
+                return
 
             st.subheader(f'Тренд кількості ключових слів для {competitor_name}')
             plot_keyword_trend(df, competitor_name)
@@ -530,21 +611,20 @@ def render_keyword_count(conn):
 
             if selected_url_for_keywords:
                 selected_page_data = df[df['url'] == selected_url_for_keywords].iloc[0]
-                if selected_page_data['keywords_found'] and isinstance(selected_page_data['keywords_found'],
-                                                                       str):
+                if selected_page_data['keywords_found'] and isinstance(selected_page_data['keywords_found'], str):
                     keywords_dict = extract_keywords(selected_page_data['keywords_found'])
 
-                    st.write(f"Знайдені ключові слова на {selected_url_for_keywords}:")
+                    st.write(f"**Знайдені ключові слова на {selected_url_for_keywords}:**")
                     st.write(keywords_dict)
 
                     selected_keywords = st.multiselect('Виберіть ключові слова для аналізу історії',
                                                        list(keywords_dict.keys()),
                                                        key="keyword_select_multiselect")
 
+
                     if selected_keywords:
                         chart_type = st.selectbox("Тип графіка",
-                                                  ['Line Chart', 'Bar Chart', 'Scatter Plot', 'Area Chart',
-                                                   'Step Chart'], key="keyword_chart_type_selectbox")
+                                                  ['Line Chart', 'Bar Chart'], key="keyword_chart_type_selectbox")
                         for keyword in selected_keywords:
                             st.subheader(f'Історія для ключового слова: {keyword}')
                             keyword_history_df = get_keyword_history(conn, competitor_name, keyword)
@@ -552,7 +632,13 @@ def render_keyword_count(conn):
                                 plot_keyword_history(keyword_history_df, keyword, selected_url_for_keywords,
                                                      chart_type)
                             else:
-                                st.write(f"Немає даних для ключового слова: {keyword}")
+                                st.warning(f"Немає даних для ключового слова: {keyword}")
+                else:
+                    st.warning("Ключові слова не знайдено для вибраного URL.")
+        else:
+            st.warning("Будь ласка, оберіть хоча б один URL у фільтрах.")
+    else:
+        st.warning("Немає даних для вибраного конкурента.")
 
 
 def render_keyword_comparison(conn):
@@ -632,7 +718,7 @@ def render_content_comparison(conn):
                 # Перетворення дат в формат datetime для віджета
                 formatted_dates = [pd.to_datetime(date).date() for date in dates]
 
-                # Вибір дат через календар
+                # Вибір дат через основну область
                 selected_date1 = st.date_input('Виберіть першу дату', min_value=min(formatted_dates),
                                                max_value=max(formatted_dates),
                                                value=min(formatted_dates),
@@ -668,14 +754,14 @@ def render_content_comparison(conn):
                             metadata_df = pd.DataFrame(metadata_changes)
                             visualize_metadata_changes(metadata_df)
                         else:
-                            st.write("Змін у метаданих не знайдено.")
+                            st.info("Змін у метаданих не знайдено.")
 
                         # Перевірка на наявність змін у контенті
                         if data1['content'].values[0] != data2['content'].values[0]:
                             st.subheader("Зміни в контенті:")
                             visualize_content_changes(data1['content'].values[0], data2['content'].values[0])
                         else:
-                            st.write("Змін у контенті не знайдено.")
+                            st.info("Змін у контенті не знайдено.")
 
                         # Порівняння ключових слів
                         if data1['keywords_found'].values[0] and data2['keywords_found'].values[0]:
@@ -685,7 +771,7 @@ def render_content_comparison(conn):
                                 st.subheader("Зміни в ключових словах:")
                                 visualize_keywords_changes(keywords_comparison)
                             else:
-                                st.write("Змін у ключових словах не знайдено.")
+                                st.info("Змін у ключових словах не знайдено.")
 
                         # Порівняння кількості ключових слів
                         if data1['keywords_count'].values[0] != data2['keywords_count'].values[0]:
@@ -695,13 +781,13 @@ def render_content_comparison(conn):
                                 'Стало': [data2['keywords_count'].values[0]]
                             }))
                         else:
-                            st.write("Змін у кількості ключових слів не знайдено.")
+                            st.info("Змін у кількості ключових слів не знайдено.")
                     else:
-                        st.write("Для обраних дат немає даних для порівняння.")
+                        st.warning("Для обраних дат немає даних для порівняння.")
                 else:
                     st.warning("Оберіть дві різні дати для порівняння.")
             else:
-                st.write("Немає доступних дат для цієї сторінки.")
+                st.info("Немає доступних дат для цієї сторінки.")
 
 
 if __name__ == "__main__":
