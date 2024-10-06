@@ -1,0 +1,48 @@
+# Ігнорування конфіденційних даних
+.env
+
+# Ігнорування віртуального середовища
+venv/
+env/
+.venv/
+.env/
+
+# Ігнорування файлів Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ігнорування файлів та папок IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Ігнорування логів та тимчасових файлів
+*.log
+*.tmp
+*.swp
+
+# Ігнорування файлів Streamlit секретів
+.streamlit/secrets.toml
+
+# Ігнорування залежностей
+# Якщо ви використовуєте pip, ігноруйте файл з пакетами
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Ігнорування файлів системи
+.DS_Store
+Thumbs.db
+
+# Ігнорування файлів Jupyter Notebook
+.ipynb_checkpoints/
+
+# Ігнорування файлів бази даних SQLite (якщо використовується)
+*.sqlite3
+
+# Ігнорування інших специфічних файлів
+*.bak
+*.bak2
