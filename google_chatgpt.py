@@ -392,7 +392,6 @@ def main():
             "Іспанія": "es",
             "Італія": "it",
             "Україна": "ua",
-            "Росія": "ru",
         }
         selected_region = st.selectbox("Оберіть регіон пошуку", options=list(regions.keys()), index=0)
         region_code = regions[selected_region]
