@@ -850,8 +850,6 @@ def generate_api_prompt_for_single_page(user_page_results, competitor_pages, key
 
 # Основна функція для відображення даних у Streamlit
 def main():
-    # Налаштування сторінки
-    st.set_page_config(page_title="SEO та Аналіз Змін Контенту", page_icon="🔍", layout="wide")
 
     # Логування для відстеження запитів і відповідей
     logging.basicConfig(filename='api_usage.log', level=logging.INFO)
